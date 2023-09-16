@@ -400,3 +400,20 @@ uint8_t olc6502::SBC()
 	a = temp & 0x00FF;
 	return 1;
 }
+
+uint8_t olc6502::PHA()
+{
+    write(0x0100 + stkp, a);
+    stkp--;
+    return 0;
+}
+
+uint8_t olc6502::PLA()
+{
+    stkp++;
+    a = read(0x0100 + stkp);
+    SetFlag(Z, a == 0x00);
+    SetFlag(N, a & 0x80);
+    return 0;
+}
+
