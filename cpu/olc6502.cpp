@@ -1,6 +1,8 @@
 #include "olc6502.h"
 #include "Bus.h"
 
+// Datasheet: http://archive.6502.org/datasheets/rockwell_r650x_r651x.pdf
+
 olc6502::olc6502()
 {
     using a = olc6502;
@@ -374,4 +376,27 @@ uint8_t olc6502::CLV()
 	return 0;
 }
 
+uint8_t olc6502::ADC()
+{
+	fetch();
+	temp = (uint16_t)a + (uint16_t)fetched + (uint16_t)GetFlag(C);
+	SetFlag(C, temp > 255);
+	SetFlag(Z, (temp & 0x00FF) == 0);
+	SetFlag(V, (~((uint16_t)a ^ (uint16_t)fetched) & ((uint16_t)a ^ (uint16_t)temp)) & 0x0080);
+	SetFlag(N, temp & 0x80);
+	a = temp & 0x00FF;
+	return 1;
+}
 
+uint8_t olc6502::SBC()
+{
+    fetch();
+	uint16_t value = ((uint16_t)fetched) ^ 0x00FF;
+	temp = (uint16_t)a + value + (uint16_t)GetFlag(C);
+	SetFlag(C, temp & 0xFF00);
+	SetFlag(Z, ((temp & 0x00FF) == 0));
+	SetFlag(V, (temp ^ (uint16_t)a) & (temp ^ value) & 0x0080);
+	SetFlag(N, temp & 0x0080);
+	a = temp & 0x00FF;
+	return 1;
+}
