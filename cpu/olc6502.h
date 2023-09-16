@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <string>
+#include <map>
 #include <stdio.h>
 
 class Bus;
@@ -32,8 +33,45 @@ public:
     uint16_t pc = 0x0000; // Program counter
     uint8_t status = 0x00; // Status Register
 
+    bool complete();
     void ConnectBus(Bus *n) {bus = n;}
+    std::map<uint16_t, std::string> disassemble(uint16_t nStart, uint16_t nStop);
 
+    void clock();
+    void reset();
+    void irq();
+    void nmi();
+
+private:
+    Bus *bus = nullptr;
+    uint8_t read(uint16_t a);
+    void write(uint16_t a, uint8_t d);
+    uint8_t fetch();
+
+    // Functions to access status register
+    uint8_t GetFlag(FLAGS6502 f);
+    void SetFlag(FLAGS6502 f, bool v);
+
+    // Variables
+    uint8_t fetched = 0x00;
+    uint16_t temp = 0x0000;
+    uint16_t addr_abs = 0x0000;
+    uint16_t addr_rel = 0x00;
+    uint8_t opcode = 0x00;
+    uint8_t cycles = 0;
+    uint32_t clock_count = 0;
+
+    struct INSTRUCTION 
+    {
+        std::string name;
+        uint8_t(olc6502::*operate)(void) = nullptr;
+        uint8_t(olc6502::*addrmode)(void) = nullptr;
+        uint8_t cycles = 0;
+    };
+
+    std::vector<INSTRUCTION> lookup;
+
+private:
     // Addressing Modes
     uint8_t IMP(); uint8_t IMM();
     uint8_t ZP0(); uint8_t ZPX();
@@ -41,6 +79,8 @@ public:
     uint8_t ABS(); uint8_t ABX();
     uint8_t ABY(); uint8_t IND();
     uint8_t IZX(); uint8_t IZY();
+
+private:
 
     // Opcodes
 	uint8_t ADC();	uint8_t AND();	uint8_t ASL();	uint8_t BCC();
@@ -59,37 +99,5 @@ public:
 	uint8_t TSX();	uint8_t TXA();	uint8_t TXS();	uint8_t TYA();
 
     uint8_t XXX();
-
-    void clock();
-    void reset();
-    void irq();
-    void nmi();
-
-    uint8_t fetch();
-    uint8_t fetched = 0x00;
-    uint16_t temp = 0x0000;
-    uint16_t addr_abs = 0x0000;
-    uint16_t addr_rel = 0x00;
-    uint8_t opcode = 0x00;
-    uint8_t cycles = 0;
-
-private:
-    Bus *bus = nullptr;
-    uint8_t read(uint16_t a);
-    void write(uint16_t a, uint8_t d);
-
-    // Functions to access status register
-    uint8_t GetFlag(FLAGS6502 f);
-    void SetFlag(FLAGS6502 f, bool v);
-
-    struct INSTRUCTION 
-    {
-        std::string name;
-        uint8_t(olc6502::*operate)(void) = nullptr;
-        uint8_t(olc6502::*addrmode)(void) = nullptr;
-        uint8_t cycles = 0;
-    };
-
-    std::vector<INSTRUCTION> lookup;
 
 };
