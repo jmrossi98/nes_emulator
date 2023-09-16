@@ -68,6 +68,8 @@ void olc6502::SetFlag(FLAGS6502 f, bool v)
         status &= ~f;
 }
 
+// Addressing modes
+
 uint8_t olc6502::IMP()
 {
     fetched = a;
@@ -199,4 +201,177 @@ uint8_t olc6502::IZY()
 	else
 		return 0;
 }
+
+uint8_t olc6502::REL()
+{
+	addr_rel = read(pc);
+	pc++;
+	if (addr_rel & 0x80)
+		addr_rel |= 0xFF00;
+	return 0;
+}
+
+// Instructions
+
+uint8_t olc6502::fetch()
+{
+	if (!(lookup[opcode].addrmode == &olc6502::IMP))
+		fetched = read(addr_abs);
+	return fetched;
+}
+
+uint8_t olc6502::AND()
+{
+	fetch();
+	a = a & fetched;
+	SetFlag(Z, a == 0x00);
+	SetFlag(N, a & 0x80);
+	return 1;
+}
+
+uint8_t olc6502::BCS()
+{
+	if (GetFlag(C) == 1)
+	{
+		cycles++;
+		addr_abs = pc + addr_rel;
+
+		if ((addr_abs & 0xFF00) != (pc & 0xFF00))
+			cycles++;
+
+		pc = addr_abs;
+	}
+	return 0;
+}
+
+
+uint8_t olc6502::BCC()
+{
+	if (GetFlag(C) == 0)
+	{
+		cycles++;
+		addr_abs = pc + addr_rel;
+		
+		if((addr_abs & 0xFF00) != (pc & 0xFF00))
+			cycles++;
+		
+		pc = addr_abs;
+	}
+	return 0;
+}
+
+uint8_t olc6502::BEQ()
+{
+	if (GetFlag(Z) == 1)
+	{
+		cycles++;
+		addr_abs = pc + addr_rel;
+
+		if ((addr_abs & 0xFF00) != (pc & 0xFF00))
+			cycles++;
+
+		pc = addr_abs;
+	}
+	return 0;
+}
+
+uint8_t olc6502::BMI()
+{
+	if (GetFlag(N) == 1)
+	{
+		cycles++;
+		addr_abs = pc + addr_rel;
+
+		if ((addr_abs & 0xFF00) != (pc & 0xFF00))
+			cycles++;
+
+		pc = addr_abs;
+	}
+	return 0;
+}
+
+uint8_t olc6502::BNE()
+{
+	if (GetFlag(Z) == 0)
+	{
+		cycles++;
+		addr_abs = pc + addr_rel;
+
+		if ((addr_abs & 0xFF00) != (pc & 0xFF00))
+			cycles++;
+
+		pc = addr_abs;
+	}
+	return 0;
+}
+
+uint8_t olc6502::BPL()
+{
+	if (GetFlag(N) == 0)
+	{
+		cycles++;
+		addr_abs = pc + addr_rel;
+
+		if ((addr_abs & 0xFF00) != (pc & 0xFF00))
+			cycles++;
+
+		pc = addr_abs;
+	}
+	return 0;
+}
+
+uint8_t olc6502::BVC()
+{
+	if (GetFlag(V) == 0)
+	{
+		cycles++;
+		addr_abs = pc + addr_rel;
+
+		if ((addr_abs & 0xFF00) != (pc & 0xFF00))
+			cycles++;
+
+		pc = addr_abs;
+	}
+	return 0;
+}
+
+uint8_t olc6502::BVS()
+{
+	if (GetFlag(V) == 1)
+	{
+		cycles++;
+		addr_abs = pc + addr_rel;
+
+		if ((addr_abs & 0xFF00) != (pc & 0xFF00))
+			cycles++;
+
+		pc = addr_abs;
+	}
+	return 0;
+}
+
+uint8_t olc6502::CLC()
+{
+	SetFlag(C, false);
+	return 0;
+}
+
+uint8_t olc6502::CLD()
+{
+	SetFlag(D, false);
+	return 0;
+}
+
+uint8_t olc6502::CLI()
+{
+	SetFlag(I, false);
+	return 0;
+}
+
+uint8_t olc6502::CLV()
+{
+	SetFlag(V, false);
+	return 0;
+}
+
 
