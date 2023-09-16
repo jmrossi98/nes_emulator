@@ -59,3 +59,93 @@ void olc6502::clock()
 
     cycles--;
 }
+
+void olc6502::SetFlag(FLAGS6502 f, bool v)
+{
+    if (v)
+        status |= f;
+    else
+        status &= ~f;
+}
+
+uint8_t olc6502::IMP()
+{
+    fetched = a;
+    return 0;
+}
+
+uint8_t olc6502::IMM()
+{
+    addr_abs = pc++;
+    return 0;
+}
+
+uint8_t olc6502::ZP0()
+{
+    addr_abs = read(pc);
+    pc++;
+    addr_abs &= 0x00FF;
+    return 0;
+}
+
+uint8_t olc6502::ZPX()
+{
+    addr_abs = (read(pc) + x);
+    pc++;
+    addr_abs &= 0x00FF;
+    return 0;
+}
+
+uint8_t olc6502::ZPY()
+{
+    addr_abs = (read(pc) + y);
+    pc++;
+    addr_abs &= 0x00FF;
+    return 0;
+}
+
+uint8_t olc6502::ABS()
+{
+    uint16_t lo = read(pc);
+    pc++;
+    uint16_t hi = read(pc);
+    pc++;
+
+    addr_abs = (hi << 8) | lo;
+
+    return 0;
+}
+
+uint8_t olc6502::ABX()
+{
+    uint16_t lo = read(pc);
+    pc++;
+    uint16_t hi = read(pc);
+    pc++;
+
+    addr_abs = (hi << 8) | lo;
+    addr_abs += x;
+
+    if ((addr_abs & 0xFF00) != (hi << 8))
+        return 1;
+    else
+        return 0;
+       
+}
+
+uint8_t olc6502::ABX()
+{
+    uint16_t lo = read(pc);
+    pc++;
+    uint16_t hi = read(pc);
+    pc++;
+
+    addr_abs = (hi << 8) | lo;
+    addr_abs += y;
+
+    if ((addr_abs & 0xFF00) != (hi << 8))
+        return 1;
+    else
+        return 0;
+       
+}
