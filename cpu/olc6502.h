@@ -4,6 +4,7 @@
 #include <string>
 #include <map>
 #include <stdio.h>
+#include <stdint.h>
 
 class Bus;
 
