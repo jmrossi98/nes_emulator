@@ -46,6 +46,7 @@ void olc6502::clock()
     if (cycles == 0)
     {
         opcode = read(pc);
+		SetFlag(U, true);
         pc++;
 
         // Get starting # of cycles
@@ -57,9 +58,17 @@ void olc6502::clock()
 
         cycles += (additional_cycle1 & additional_cycle2);
 
+		SetFlag(U, true);
     }
 
+	clock_count++;
     cycles--;
+}
+
+// Flag functions
+uint8_t olc6502::GetFlag(FLAGS6502 f)
+{
+	return ((status & f) > 0) ? 1 : 0;
 }
 
 void olc6502::SetFlag(FLAGS6502 f, bool v)
