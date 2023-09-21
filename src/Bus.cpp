@@ -2,25 +2,26 @@
 
 Bus::Bus()
 {
-    // Clear RAM
-    for (auto &i : ram) i = 0x00;
-
     // Connect CPU to bus
     cpu.ConnectBus(this);
 }
 
 Bus::~Bus(){}
 
-void Bus::write(uint16_t addr, uint8_t data)
+void Bus::cpuWrite(uint16_t addr, uint8_t data)
 {
     if (addr >= 0x0000 && addr <= 0xFFFF)
-        ram[addr] = data;
+        cpuRam[addr] = data;
 }
 
-uint8_t Bus::read(uint16_t addr, bool bReadOnly)
+uint8_t Bus::cpuRead(uint16_t addr, bool bReadOnly)
 {
-    if (addr >= 0x0000 && addr <= 0xFFFF)
-        return ram[addr];
+    uint8_t data = 0x00;
 
-    return 0x00;
+    if (addr >= 0x0000 && addr <= 0x1FFF)
+    {
+        data = cpuRam[addr & 0x07FF];
+    }
+
+    return data;
 }
