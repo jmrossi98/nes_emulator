@@ -1,5 +1,5 @@
 #include "olc6502.h"
-#include "Bus.h"
+#include "../Bus.h"
 
 // Datasheet: http://archive.6502.org/datasheets/rockwell_r650x_r651x.pdf
 
