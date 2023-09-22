@@ -59,3 +59,8 @@ void olc2C02::cpuWrite(uint16_t addr, uint8_t data)
 		break;
 	}
 }
+
+void olc2C02::ConnectCartridge(const std::shared_ptr<Cartridge>& cartridge)
+{
+	this->cart = cartridge;
+}
