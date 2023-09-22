@@ -1,5 +1,3 @@
-#pragma once
-
 #include "Cartridge.h"
 
 Cartridge::Cartridge(const std::string& sFileName)
@@ -69,6 +67,15 @@ Cartridge::Cartridge(const std::string& sFileName)
 		ifs.close();
 	}
 
+}
+
+Cartridge::~Cartridge()
+{
+}
+
+bool Cartridge::ImageValid()
+{
+	return bImageValid;
 }
 
 bool Cartridge::cpuRead(uint16_t addr, uint8_t &data)
