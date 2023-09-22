@@ -1,5 +1,5 @@
 #include "olc6502.h"
-#include "Bus.h"
+#include "../Bus.h"
 
 // Datasheet: http://archive.6502.org/datasheets/rockwell_r650x_r651x.pdf
 
@@ -33,12 +33,12 @@ olc6502::~olc6502(){}
 
 uint8_t olc6502::read(uint16_t a)
 {
-    return bus->read(a, false);
+    return bus->cpuRead(a, false);
 }
 
 void olc6502::write(uint16_t a, uint8_t d)
 {
-    return bus->write(a, d);
+    return bus->cpuWrite(a, d);
 }
 
 void olc6502::reset()
