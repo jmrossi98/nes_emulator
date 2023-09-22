@@ -1,5 +1,3 @@
-#pragma once
-
 #include "olc2C02.h"
 
 olc2C02::olc2C02()
@@ -8,6 +6,26 @@ olc2C02::olc2C02()
 
 olc2C02::~olc2C02()
 {
+	delete sprScreen;
+	delete sprNameTable[0];
+	delete sprNameTable[1];
+	delete sprPatternTable[0];
+	delete sprPatternTable[1];
+}
+
+olc::Sprite& olc2C02::GetScreen()
+{
+	return *sprScreen;
+}
+
+olc::Sprite & olc2C02::GetNameTable(uint8_t i)
+{
+	return *sprNameTable[i];
+}
+
+olc::Sprite & olc2C02::GetPatternTable(uint8_t i)
+{
+	return *sprPatternTable[i];
 }
 
 uint8_t olc2C02::cpuRead(uint16_t addr, bool rdonly)
