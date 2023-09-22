@@ -2,7 +2,7 @@
 
 Cartridge::Cartridge(const std::string& sFileName)
 {
-    	struct sHeader
+    struct sHeader
 	{
 		char name[4];
 		uint8_t prg_rom_chunks;
@@ -21,24 +21,20 @@ Cartridge::Cartridge(const std::string& sFileName)
 	ifs.open(sFileName, std::ifstream::binary);
 	if (ifs.is_open())
 	{
-		// Read file header
 		ifs.read((char*)&header, sizeof(sHeader));
-
-		// If a "trainer" exists we just need to read past
-		// it before we get to the good stuff
 		if (header.mapper1 & 0x04)
+		{
 			ifs.seekg(512, std::ios_base::cur);
+		}
 
-		// Determine Mapper ID
 		nMapperID = ((header.mapper2 >> 4) << 4) | (header.mapper1 >> 4);
 		mirror = (header.mapper1 & 0x01) ? VERTICAL : HORIZONTAL;
 
-		// "Discover" File Format
 		uint8_t nFileType = 1;
 
 		if (nFileType == 0)
 		{
-
+			// fill in later
 		}
 
 		if (nFileType == 1)
@@ -54,19 +50,18 @@ Cartridge::Cartridge(const std::string& sFileName)
 
 		if (nFileType == 2)
 		{
-
+			// fill in later
 		}
 
-		// Load appropriate mapper
+		// Load mapper
 		switch (nMapperID)
 		{
-		case 0: pMapper = std::make_shared<Mapper_000>(nPRGBanks, nCHRBanks); break;
+			case 0: pMapper = std::make_shared<Mapper_000>(nPRGBanks, nCHRBanks); break;
 		}
 
 		bImageValid = true;
 		ifs.close();
 	}
-
 }
 
 Cartridge::~Cartridge()
