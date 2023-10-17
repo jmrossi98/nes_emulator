@@ -5,9 +5,9 @@
 
 olc6502::olc6502()
 {
-    using a = olc6502;
+	using a = olc6502;
 
-    // Copied from datasheet. For each opcode has the pneumonic, function pointer to call it, number of cycles
+	// Copied from datasheet. For each opcode has the pneumonic, function pointer to call it, number of cycles
 	lookup = 
 	{
 		{ "BRK", &a::BRK, &a::IMM, 7 },{ "ORA", &a::ORA, &a::IZX, 6 },{ "???", &a::XXX, &a::IMP, 2 },{ "???", &a::XXX, &a::IMP, 8 },{ "???", &a::NOP, &a::IMP, 3 },{ "ORA", &a::ORA, &a::ZP0, 3 },{ "ASL", &a::ASL, &a::ZP0, 5 },{ "???", &a::XXX, &a::IMP, 5 },{ "PHP", &a::PHP, &a::IMP, 3 },{ "ORA", &a::ORA, &a::IMM, 2 },{ "ASL", &a::ASL, &a::IMP, 2 },{ "???", &a::XXX, &a::IMP, 2 },{ "???", &a::NOP, &a::IMP, 4 },{ "ORA", &a::ORA, &a::ABS, 4 },{ "ASL", &a::ASL, &a::ABS, 6 },{ "???", &a::XXX, &a::IMP, 6 },
@@ -33,12 +33,12 @@ olc6502::~olc6502(){}
 
 uint8_t olc6502::read(uint16_t a)
 {
-    return bus->cpuRead(a, false);
+	return bus->cpuRead(a, false);
 }
 
 void olc6502::write(uint16_t a, uint8_t d)
 {
-    return bus->cpuWrite(a, d);
+	bus->cpuWrite(a, d);
 }
 
 void olc6502::reset()
@@ -49,15 +49,16 @@ void olc6502::reset()
     stkp = 0xFD;
     status = 0x00 | U;
 
-    addr_abs = 0xFFFC;
-    uint16_t lo = read(addr_abs + 0);
-    uint16_t hi = read(addr_abs + 1);
+	addr_abs = 0xFFFC;
+	uint16_t lo = read(addr_abs + 0);
+	uint16_t hi = read(addr_abs + 1);
 
-    pc = (hi << 8) | lo;
+	pc = (hi << 8) | lo;
 
-    addr_rel = 0x0000;
-    addr_abs = 0x0000;
-    fetched = 0x00;
+	addr_rel = 0x0000;
+	addr_abs = 0x0000;
+	fetched = 0x00;
+	cycles = 8;
 }
 
 void olc6502::irq()
@@ -107,26 +108,26 @@ void olc6502::nmi()
 
 void olc6502::clock()
 {
-    if (cycles == 0)
-    {
-        opcode = read(pc);
+	if (cycles == 0)
+	{
+		opcode = read(pc);
 		SetFlag(U, true);
-        pc++;
+		pc++;
 
-        // Get starting # of cycles
-        cycles = lookup[opcode].cycles;
+		// Get starting # of cycles
+		cycles = lookup[opcode].cycles;
 
-        uint8_t additional_cycle1 = (this->*lookup[opcode].addrmode)();
+		uint8_t additional_cycle1 = (this->*lookup[opcode].addrmode)();
 
-        uint8_t additional_cycle2 = (this->*lookup[opcode].operate)();
+		uint8_t additional_cycle2 = (this->*lookup[opcode].operate)();
 
-        cycles += (additional_cycle1 & additional_cycle2);
+		cycles += (additional_cycle1 & additional_cycle2);
 
 		SetFlag(U, true);
-    }
+	}
 
 	clock_count++;
-    cycles--;
+	cycles--;
 }
 
 // Flag functions
@@ -137,10 +138,10 @@ uint8_t olc6502::GetFlag(FLAGS6502 f)
 
 void olc6502::SetFlag(FLAGS6502 f, bool v)
 {
-    if (v)
-        status |= f;
-    else
-        status &= ~f;
+	if (v)
+		status |= f;
+	else
+		status &= ~f;
 }
 
 // Addressing modes
