@@ -17,6 +17,11 @@ private:
 
     uint8_t tblName[2][1024];
     uint8_t tblPalette [32];
+	uint8_t tblPattern[2][4096];
+
+private:
+	int16_t scanline = 0;
+	int16_t cycle = 0;
 
 public:
     // Main bus comms
