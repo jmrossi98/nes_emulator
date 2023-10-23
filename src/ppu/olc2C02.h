@@ -40,6 +40,40 @@ public:
 
 	bool frame_complete = false;
 
+private:
+
+    // Status register
+	union
+	{
+		struct
+		{
+			uint8_t unused : 5;
+			uint8_t sprite_overflow : 1;
+			uint8_t sprite_zero_hit : 1;
+			uint8_t vertical_blank : 1;
+		};
+
+		uint8_t reg;
+	} status;
+
+    // Mask register
+    union
+	{
+		struct
+		{
+			uint8_t grayscale : 1;
+			uint8_t render_background_left : 1;
+			uint8_t render_sprites_left : 1;
+			uint8_t render_background : 1;
+			uint8_t render_sprites : 1;
+			uint8_t enhance_red : 1;
+			uint8_t enhance_green : 1;
+			uint8_t enhance_blue : 1;
+		};
+
+		uint8_t reg;
+	} mask;
+
 public:
     // Main bus comms
     uint8_t cpuRead(uint16_t addr, bool rdonly = false);
