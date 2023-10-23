@@ -27,6 +27,9 @@ public: // Devices on bus
     // GamePak Cartridge
     std::shared_ptr<Cartridge> cart;
 
+	// Controllers
+	uint8_t controller[2];
+
 public:
     void cpuWrite(uint16_t addr, uint8_t data);
     uint8_t cpuRead(uint16_t addr, bool bReadOnly = false);
@@ -38,5 +41,5 @@ public:
 
 private:
 	uint32_t nSystemClockCounter = 0;
-
+    uint8_t controller_state[2];
 };
