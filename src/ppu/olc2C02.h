@@ -74,6 +74,60 @@ private:
 		uint8_t reg;
 	} mask;
 
+	union PPUCTRL
+	{
+		struct
+		{
+			uint8_t nametable_x : 1;
+			uint8_t nametable_y : 1;
+			uint8_t increment_mode : 1;
+			uint8_t pattern_sprite : 1;
+			uint8_t pattern_background : 1;
+			uint8_t sprite_size : 1;
+			uint8_t slave_mode : 1; // unused
+			uint8_t enable_nmi : 1;
+		};
+
+		uint8_t reg;
+	} control;
+
+	union loopy_register
+	{
+		struct
+		{
+
+			uint16_t coarse_x : 5;
+			uint16_t coarse_y : 5;
+			uint16_t nametable_x : 1;
+			uint16_t nametable_y : 1;
+			uint16_t fine_y : 3;
+			uint16_t unused : 1;
+		};
+
+		uint16_t reg = 0x0000;
+	};
+	
+	
+	loopy_register vram_addr; // Active "pointer" address into nametable to extract background tile info
+	loopy_register tram_addr; // Temporary store of information to be "transferred" into "pointer" at various times
+
+	// Pixel offset horizontally
+	uint8_t fine_x = 0x00;
+
+	// Internal communications
+	uint8_t address_latch = 0x00;
+	uint8_t ppu_data_buffer = 0x00;
+
+	// Background rendering
+	uint8_t bg_next_tile_id     = 0x00;
+	uint8_t bg_next_tile_attrib = 0x00;
+	uint8_t bg_next_tile_lsb    = 0x00;
+	uint8_t bg_next_tile_msb    = 0x00;
+	uint16_t bg_shifter_pattern_lo = 0x0000;
+	uint16_t bg_shifter_pattern_hi = 0x0000;
+	uint16_t bg_shifter_attrib_lo  = 0x0000;
+	uint16_t bg_shifter_attrib_hi  = 0x0000;
+
 public:
     // Main bus comms
     uint8_t cpuRead(uint16_t addr, bool rdonly = false);
@@ -85,4 +139,6 @@ public:
 
     void ConnectCartridge(const std::shared_ptr<Cartridge>& cartridge);
     void clock();
+    void reset();
+	bool nmi = false;
 };
