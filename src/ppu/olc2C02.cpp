@@ -106,8 +106,12 @@ void olc2C02::cpuWrite(uint16_t addr, uint8_t data)
 	switch (addr)
 	{
 	case 0x0000: // Control
+		control.reg = data;
+		tram_addr.nametable_x = control.nametable_x;
+		tram_addr.nametable_y = control.nametable_y;
 		break;
 	case 0x0001: // Mask
+		mask.reg = data;
 		break;
 	case 0x0002: // Status
 		break;
