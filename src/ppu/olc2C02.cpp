@@ -136,8 +136,25 @@ void olc2C02::cpuWrite(uint16_t addr, uint8_t data)
 		}
 		break;
 	case 0x0006: // PPU Address
+		if (address_latch == 0)
+		{
+			// PPU addr is accessed by CPU, first high byte of addr is latched, then the low byte
+			tram_addr.reg = (uint16_t)((data & 0x3F) << 8) | (tram_addr.reg & 0x00FF);
+			address_latch = 1;
+		}
+		else
+		{
+			// Update VRAM addr, should be maintained while rendering scanline
+			tram_addr.reg = (tram_addr.reg & 0xFF00) | data;
+			vram_addr = tram_addr;
+			address_latch = 0;
+		}
 		break;
 	case 0x0007: // PPU Data
+		ppuWrite(vram_addr.reg, data);
+
+		// In vertical mode, skip one nametable row, in horizontal mode move to next column
+		vram_addr.reg += (control.increment_mode ? 32 : 1);
 		break;
 	}
 }
