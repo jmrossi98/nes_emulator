@@ -50,6 +50,53 @@ uint8_t olc2C02::cpuRead(uint16_t addr, bool rdonly)
 	case 0x0007: // PPU Data
 		break;
 	}
+	}
+
+	// In this case registers can change state when being read from
+	else
+	{
+		switch (addr)
+		{
+		case 0x0000: // Control
+			break;
+		case 0x0001: // Mask
+			break;
+
+		case 0x0002: // Status
+			// Only the top three bits contain status information, leaving other bits readable just in case
+			data = (status.reg & 0xE0) | (ppu_data_buffer & 0x1F);
+
+			// Clear vertical blanking flag
+			status.vertical_blank = 0;
+
+			// Reset Loopy's Address latch flag
+			address_latch = 0;
+			break;
+
+		case 0x0003: // OAM Address
+			break;
+		case 0x0004: // OAM Data
+			break;
+		case 0x0005: // Scroll
+			break;
+		case 0x0006: // PPU Address
+			break;
+
+		case 0x0007: // PPU Data  
+			// Get data from previous request since reads from nametable are delayed one cycle
+			data = ppu_data_buffer;
+	
+			// Update the buffer for next read
+			ppu_data_buffer = ppuRead(vram_addr.reg);
+
+			// Return immediately if address is in palette range
+			if (vram_addr.reg >= 0x3F00) data = ppu_data_buffer;
+
+			// In vertical mode, skip one nametable row, in horizontal mode move to next column
+			vram_addr.reg += (control.increment_mode ? 32 : 1);
+			break;
+		}
+	}
 
 	return data;
 }
