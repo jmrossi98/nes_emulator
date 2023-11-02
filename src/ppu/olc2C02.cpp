@@ -295,6 +295,67 @@ void olc2C02::reset()
 
 void olc2C02::clock()
 {
+	// Increment the background tile pointer one column horizontally
+	auto IncrementScrollX = [&]()
+	{
+		// Check if rendering enabled
+		if (mask.render_background || mask.render_sprites)
+		{
+			// Check if we want to wrap into another nametable
+			if (vram_addr.coarse_x == 31)
+			{
+				// Leaving nametable so wrap address round
+				vram_addr.coarse_x = 0;
+
+				// Flip target nametable bit
+				vram_addr.nametable_x = ~vram_addr.nametable_x;
+			}
+			else
+			{
+				// Staying in current nametable, so just increment
+				vram_addr.coarse_x++;
+			}
+		}
+	};
+
+	// Increment the background tile pointer one vertical scanline
+	auto IncrementScrollY = [&]()
+	{
+		// Check if rendering enabled
+		if (mask.render_background || mask.render_sprites)
+		{
+			// If possible, just increment the fine y offset
+			if (vram_addr.fine_y < 7)
+			{
+				vram_addr.fine_y++;
+			}
+			else
+			{
+				// Reset fine Y offset
+				vram_addr.fine_y = 0;
+
+				// Check if we need to swap vertical nametable targets
+				if (vram_addr.coarse_y == 29)
+				{
+					// Reset coarse Y offset
+					vram_addr.coarse_y = 0;
+
+					// Flip the target nametable bit
+					vram_addr.nametable_y = ~vram_addr.nametable_y;
+				}
+				else if (vram_addr.coarse_y == 31)
+				{
+					// Wrap around the current nametable
+					vram_addr.coarse_y = 0;
+				}
+				else
+				{
+					// Increment the coarse Y offset
+					vram_addr.coarse_y++;
+				}
+			}
+		}
+	};
 }
 
 olc::Sprite& olc2C02::GetPatternTable(uint8_t i, uint8_t palette)
