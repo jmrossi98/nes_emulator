@@ -8,6 +8,17 @@ olc2C02::olc2C02()
 
 olc2C02::~olc2C02()
 {
+	delete sprScreen;
+	delete sprNameTable[0];
+	delete sprNameTable[1];
+	delete sprPatternTable[0];
+	delete sprPatternTable[1];
+}
+
+olc::Sprite& olc2C02::GetScreen()
+{
+	// Gives current sprite holding the rendered screen
+	return *sprScreen;
 }
 
 uint8_t olc2C02::cpuRead(uint16_t addr, bool rdonly)
