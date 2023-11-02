@@ -44,7 +44,16 @@ Cartridge::Cartridge(const std::string& sFileName)
 			ifs.read((char*)vPRGMemory.data(), vPRGMemory.size());
 
 			nCHRBanks = header.chr_rom_chunks;
+			if (nCHRBanks == 0)
+			{
+				// Create CHR RAM
+				vCHRMemory.resize(8192);
+			}
+			else
+			{
+				// Allocate for ROM
 			vCHRMemory.resize(nCHRBanks * 8192);
+			}
 			ifs.read((char*)vCHRMemory.data(), vCHRMemory.size());
 		}
 
