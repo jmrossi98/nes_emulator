@@ -14,13 +14,19 @@ uint8_t olc2C02::cpuRead(uint16_t addr, bool rdonly)
 {
 	uint8_t data = 0x00;
 
+	// Read only makes it so PPU state can be checked without fear of changing anything
+	if (rdonly)
+	{
 	switch (addr)
 	{
 	case 0x0000: // Control
+			data = control.reg;
 		break;
 	case 0x0001: // Mask
+			data = mask.reg;
 		break;
 	case 0x0002: // Status
+			data = status.reg;
 		break;
 	case 0x0003: // OAM Address
 		break;
