@@ -21,7 +21,12 @@ void Bus::cpuWrite(uint16_t addr, uint8_t data)
 	else if (addr >= 0x2000 && addr <= 0x3FFF)
 	{
 		ppu.cpuWrite(addr & 0x0007, data);
-	}		
+	}
+	else if (addr >= 0x4016 && addr <= 0x4017)
+	{
+		data = (controller_state[addr & 0x0001] & 0x80) > 0;
+		controller_state[addr & 0x0001] <<= 1;
+	}
 }
 
 uint8_t Bus::cpuRead(uint16_t addr, bool bReadOnly)
@@ -61,6 +66,12 @@ void Bus::clock()
 	if (nSystemClockCounter % 3 == 0)
 	{
 		cpu.clock();
+	}
+
+	if (ppu.nmi)
+	{
+		ppu.nmi = false;
+		cpu.nmi();
 	}
 
 	nSystemClockCounter++;
