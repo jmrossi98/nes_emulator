@@ -120,6 +120,20 @@ void olc2C02::cpuWrite(uint16_t addr, uint8_t data)
 	case 0x0004: // OAM Data
 		break;
 	case 0x0005: // Scroll
+		if (address_latch == 0)
+		{
+			// X offset is split into coarse and fine
+			fine_x = data & 0x07;
+			tram_addr.coarse_x = data >> 3;
+			address_latch = 1;
+		}
+		else
+		{
+			// Y offset is split into coarse and fine
+			tram_addr.fine_y = data & 0x07;
+			tram_addr.coarse_y = data >> 3;
+			address_latch = 0;
+		}
 		break;
 	case 0x0006: // PPU Address
 		break;
