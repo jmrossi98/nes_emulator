@@ -106,6 +106,27 @@ private:
 
 		uint8_t reg;
 	} control;
+	
+	loopy_register vram_addr; // Active pointer address
+	loopy_register tram_addr; // Info to be stored as pointer
+
+	// Pixel offset horizontally
+	uint8_t fine_x = 0x00;
+
+	// Internal communications
+	uint8_t address_latch = 0x00;
+	uint8_t ppu_data_buffer = 0x00;
+
+	// Background rendering
+	uint8_t bg_next_tile_id     = 0x00;
+	uint8_t bg_next_tile_attrib = 0x00;
+	uint8_t bg_next_tile_lsb    = 0x00;
+	uint8_t bg_next_tile_msb    = 0x00;
+	uint16_t bg_shifter_pattern_lo = 0x0000;
+	uint16_t bg_shifter_pattern_hi = 0x0000;
+	uint16_t bg_shifter_attrib_lo  = 0x0000;
+	uint16_t bg_shifter_attrib_hi  = 0x0000;
+
 public:
     // Main bus comms
     uint8_t cpuRead(uint16_t addr, bool rdonly = false);
