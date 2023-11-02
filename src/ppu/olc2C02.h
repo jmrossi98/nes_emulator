@@ -117,4 +117,6 @@ public:
 
     void ConnectCartridge(const std::shared_ptr<Cartridge>& cartridge);
     void clock();
+	void reset();
+	bool nmi = false;
 };
