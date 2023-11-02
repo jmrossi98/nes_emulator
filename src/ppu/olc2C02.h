@@ -74,6 +74,38 @@ private:
 		uint8_t reg;
 	} mask;
 
+	union loopy_register
+	{
+		struct
+		{
+
+			uint16_t coarse_x : 5;
+			uint16_t coarse_y : 5;
+			uint16_t nametable_x : 1;
+			uint16_t nametable_y : 1;
+			uint16_t fine_y : 3;
+			uint16_t unused : 1;
+		};
+
+		uint16_t reg = 0x0000;
+	};
+	
+	union PPUCTRL
+	{
+		struct
+		{
+			uint8_t nametable_x : 1;
+			uint8_t nametable_y : 1;
+			uint8_t increment_mode : 1;
+			uint8_t pattern_sprite : 1;
+			uint8_t pattern_background : 1;
+			uint8_t sprite_size : 1;
+			uint8_t slave_mode : 1;
+			uint8_t enable_nmi : 1;
+		};
+
+		uint8_t reg;
+	} control;
 public:
     // Main bus comms
     uint8_t cpuRead(uint16_t addr, bool rdonly = false);
