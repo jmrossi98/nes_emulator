@@ -2,7 +2,7 @@
 
 Cartridge::Cartridge(const std::string& sFileName)
 {
-    struct sHeader
+	struct sHeader
 	{
 		char name[4];
 		uint8_t prg_rom_chunks;
@@ -52,7 +52,7 @@ Cartridge::Cartridge(const std::string& sFileName)
 			else
 			{
 				// Allocate for ROM
-			vCHRMemory.resize(nCHRBanks * 8192);
+				vCHRMemory.resize(nCHRBanks * 8192);
 			}
 			ifs.read((char*)vCHRMemory.data(), vCHRMemory.size());
 		}
@@ -65,7 +65,7 @@ Cartridge::Cartridge(const std::string& sFileName)
 		// Load mapper
 		switch (nMapperID)
 		{
-			case 0: pMapper = std::make_shared<Mapper_000>(nPRGBanks, nCHRBanks); break;
+		case 0: pMapper = std::make_shared<Mapper_000>(nPRGBanks, nCHRBanks); break;
 		}
 
 		bImageValid = true;
@@ -128,4 +128,11 @@ bool Cartridge::ppuWrite(uint16_t addr, uint8_t data)
 	}
 	else
 		return false;
+}
+
+void Cartridge::reset()
+{
+	// Only reset mapper
+	if (pMapper != nullptr)
+		pMapper->reset();
 }
