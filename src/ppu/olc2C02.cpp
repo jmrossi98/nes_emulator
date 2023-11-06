@@ -8,19 +8,36 @@ olc2C02::olc2C02()
 
 olc2C02::~olc2C02()
 {
+	delete sprScreen;
+	delete sprNameTable[0];
+	delete sprNameTable[1];
+	delete sprPatternTable[0];
+	delete sprPatternTable[1];
+}
+
+olc::Sprite& olc2C02::GetScreen()
+{
+	// Gives current sprite holding the rendered screen
+	return *sprScreen;
 }
 
 uint8_t olc2C02::cpuRead(uint16_t addr, bool rdonly)
 {
 	uint8_t data = 0x00;
 
+	// Read only makes it so PPU state can be checked without fear of changing anything
+	if (rdonly)
+	{
 	switch (addr)
 	{
 	case 0x0000: // Control
+			data = control.reg;
 		break;
 	case 0x0001: // Mask
+			data = mask.reg;
 		break;
 	case 0x0002: // Status
+			data = status.reg;
 		break;
 	case 0x0003: // OAM Address
 		break;
@@ -33,6 +50,53 @@ uint8_t olc2C02::cpuRead(uint16_t addr, bool rdonly)
 	case 0x0007: // PPU Data
 		break;
 	}
+	}
+
+	// In this case registers can change state when being read from
+	else
+	{
+		switch (addr)
+		{
+		case 0x0000: // Control
+			break;
+		case 0x0001: // Mask
+			break;
+
+		case 0x0002: // Status
+			// Only the top three bits contain status information, leaving other bits readable just in case
+			data = (status.reg & 0xE0) | (ppu_data_buffer & 0x1F);
+
+			// Clear vertical blanking flag
+			status.vertical_blank = 0;
+
+			// Reset Loopy's Address latch flag
+			address_latch = 0;
+			break;
+
+		case 0x0003: // OAM Address
+			break;
+		case 0x0004: // OAM Data
+			break;
+		case 0x0005: // Scroll
+			break;
+		case 0x0006: // PPU Address
+			break;
+
+		case 0x0007: // PPU Data  
+			// Get data from previous request since reads from nametable are delayed one cycle
+			data = ppu_data_buffer;
+	
+			// Update the buffer for next read
+			ppu_data_buffer = ppuRead(vram_addr.reg);
+
+			// Return immediately if address is in palette range
+			if (vram_addr.reg >= 0x3F00) data = ppu_data_buffer;
+
+			// In vertical mode, skip one nametable row, in horizontal mode move to next column
+			vram_addr.reg += (control.increment_mode ? 32 : 1);
+			break;
+		}
+	}
 
 	return data;
 }
@@ -42,8 +106,12 @@ void olc2C02::cpuWrite(uint16_t addr, uint8_t data)
 	switch (addr)
 	{
 	case 0x0000: // Control
+		control.reg = data;
+		tram_addr.nametable_x = control.nametable_x;
+		tram_addr.nametable_y = control.nametable_y;
 		break;
 	case 0x0001: // Mask
+		mask.reg = data;
 		break;
 	case 0x0002: // Status
 		break;
@@ -52,10 +120,41 @@ void olc2C02::cpuWrite(uint16_t addr, uint8_t data)
 	case 0x0004: // OAM Data
 		break;
 	case 0x0005: // Scroll
+		if (address_latch == 0)
+		{
+			// X offset is split into coarse and fine
+			fine_x = data & 0x07;
+			tram_addr.coarse_x = data >> 3;
+			address_latch = 1;
+		}
+		else
+		{
+			// Y offset is split into coarse and fine
+			tram_addr.fine_y = data & 0x07;
+			tram_addr.coarse_y = data >> 3;
+			address_latch = 0;
+		}
 		break;
 	case 0x0006: // PPU Address
+		if (address_latch == 0)
+		{
+			// PPU addr is accessed by CPU, first high byte of addr is latched, then the low byte
+			tram_addr.reg = (uint16_t)((data & 0x3F) << 8) | (tram_addr.reg & 0x00FF);
+			address_latch = 1;
+		}
+		else
+		{
+			// Update VRAM addr, should be maintained while rendering scanline
+			tram_addr.reg = (tram_addr.reg & 0xFF00) | data;
+			vram_addr = tram_addr;
+			address_latch = 0;
+		}
 		break;
 	case 0x0007: // PPU Data
+		ppuWrite(vram_addr.reg, data);
+
+		// In vertical mode, skip one nametable row, in horizontal mode move to next column
+		vram_addr.reg += (control.increment_mode ? 32 : 1);
 		break;
 	}
 }
@@ -172,8 +271,91 @@ void olc2C02::ConnectCartridge(const std::shared_ptr<Cartridge>& cartridge)
 	this->cart = cartridge;
 }
 
+void olc2C02::reset()
+{
+	fine_x = 0x00;
+	address_latch = 0x00;
+	ppu_data_buffer = 0x00;
+	scanline = 0;
+	cycle = 0;
+	bg_next_tile_id = 0x00;
+	bg_next_tile_attrib = 0x00;
+	bg_next_tile_lsb = 0x00;
+	bg_next_tile_msb = 0x00;
+	bg_shifter_pattern_lo = 0x0000;
+	bg_shifter_pattern_hi = 0x0000;
+	bg_shifter_attrib_lo = 0x0000;
+	bg_shifter_attrib_hi = 0x0000;
+	status.reg = 0x00;
+	mask.reg = 0x00;
+	control.reg = 0x00;
+	vram_addr.reg = 0x0000;
+	tram_addr.reg = 0x0000;
+}
+
 void olc2C02::clock()
 {
+	// Increment the background tile pointer one column horizontally
+	auto IncrementScrollX = [&]()
+	{
+		// Check if rendering enabled
+		if (mask.render_background || mask.render_sprites)
+		{
+			// Check if we want to wrap into another nametable
+			if (vram_addr.coarse_x == 31)
+			{
+				// Leaving nametable so wrap address round
+				vram_addr.coarse_x = 0;
+
+				// Flip target nametable bit
+				vram_addr.nametable_x = ~vram_addr.nametable_x;
+			}
+			else
+			{
+				// Staying in current nametable, so just increment
+				vram_addr.coarse_x++;
+			}
+		}
+	};
+
+	// Increment the background tile pointer one vertical scanline
+	auto IncrementScrollY = [&]()
+	{
+		// Check if rendering enabled
+		if (mask.render_background || mask.render_sprites)
+		{
+			// If possible, just increment the fine y offset
+			if (vram_addr.fine_y < 7)
+			{
+				vram_addr.fine_y++;
+			}
+			else
+			{
+				// Reset fine Y offset
+				vram_addr.fine_y = 0;
+
+				// Check if we need to swap vertical nametable targets
+				if (vram_addr.coarse_y == 29)
+				{
+					// Reset coarse Y offset
+					vram_addr.coarse_y = 0;
+
+					// Flip the target nametable bit
+					vram_addr.nametable_y = ~vram_addr.nametable_y;
+				}
+				else if (vram_addr.coarse_y == 31)
+				{
+					// Wrap around the current nametable
+					vram_addr.coarse_y = 0;
+				}
+				else
+				{
+					// Increment the coarse Y offset
+					vram_addr.coarse_y++;
+				}
+			}
+		}
+	};
 }
 
 olc::Sprite& olc2C02::GetPatternTable(uint8_t i, uint8_t palette)
