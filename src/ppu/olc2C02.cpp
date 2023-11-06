@@ -356,6 +356,54 @@ void olc2C02::clock()
 			}
 		}
 	};
+
+	// Transfer stored horizontal nametable info into pointer
+	auto TransferAddressX = [&]()
+	{
+		// Check if rendering enabled
+		if (mask.render_background || mask.render_sprites)
+		{
+			vram_addr.nametable_x = tram_addr.nametable_x;
+			vram_addr.coarse_x    = tram_addr.coarse_x;
+		}
+	};
+
+	// Transfer stored vertical nametable info into pointer
+	auto TransferAddressY = [&]()
+	{
+		// Check if rendering enabled
+		if (mask.render_background || mask.render_sprites)
+		{
+			vram_addr.fine_y      = tram_addr.fine_y;
+			vram_addr.nametable_y = tram_addr.nametable_y;
+			vram_addr.coarse_y    = tram_addr.coarse_y;
+		}
+	};
+
+	// Prepare background tile shifters next 8 pixels in scanline
+	auto LoadBackgroundShifters = [&]()
+	{
+		bg_shifter_pattern_lo = (bg_shifter_pattern_lo & 0xFF00) | bg_next_tile_lsb;
+		bg_shifter_pattern_hi = (bg_shifter_pattern_hi & 0xFF00) | bg_next_tile_msb;
+		bg_shifter_attrib_lo  = (bg_shifter_attrib_lo & 0xFF00) | ((bg_next_tile_attrib & 0b01) ? 0xFF : 0x00);
+		bg_shifter_attrib_hi  = (bg_shifter_attrib_hi & 0xFF00) | ((bg_next_tile_attrib & 0b10) ? 0xFF : 0x00);
+	};
+
+
+	// Shifters store pattern and attr info, shift their contents by 1 bit
+	auto UpdateShifters = [&]()
+	{
+		if (mask.render_background)
+		{
+			// Shift background tile pattern row
+			bg_shifter_pattern_lo <<= 1;
+			bg_shifter_pattern_hi <<= 1;
+
+			// Shift palette attributes by 1
+			bg_shifter_attrib_lo <<= 1;
+			bg_shifter_attrib_hi <<= 1;
+		}
+	};
 }
 
 olc::Sprite& olc2C02::GetPatternTable(uint8_t i, uint8_t palette)
