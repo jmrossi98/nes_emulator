@@ -404,6 +404,115 @@ void olc2C02::clock()
 			bg_shifter_attrib_hi <<= 1;
 		}
 	};
+
+	// Pre render scanline sets up shifters for next visible scanline
+	if (scanline >= -1 && scanline < 240)
+	{		
+		if (scanline == 0 && cycle == 0)
+		{
+			// Skip cycle
+			cycle = 1;
+		}
+
+		if (scanline == -1 && cycle == 1)
+		{
+			// Clear vertical blank flag
+			status.vertical_blank = 0;
+		}
+
+		// Work with visible data
+		if ((cycle >= 2 && cycle < 258) || (cycle >= 321 && cycle < 338))
+		{
+			UpdateShifters();
+
+			// Perform every 2 clock cycles.
+			switch ((cycle - 1) % 8)
+			{
+			case 0:
+				// Load background tile pattern and attributes into shifter
+				LoadBackgroundShifters();
+
+				// Fetch the next background tile ID
+				bg_next_tile_id = ppuRead(0x2000 | (vram_addr.reg & 0x0FFF));
+				break;
+
+			case 2:
+				// Fetch the next background tile attribute			
+				bg_next_tile_attrib = ppuRead(0x23C0 | (vram_addr.nametable_y << 11) 
+					                                 | (vram_addr.nametable_x << 10) 
+					                                 | ((vram_addr.coarse_y >> 2) << 3) 
+					                                 | (vram_addr.coarse_x >> 2));
+
+				// Get bottom bits of the coarse coordinates that specify palette
+				if (vram_addr.coarse_y & 0x02) bg_next_tile_attrib >>= 4;
+				if (vram_addr.coarse_x & 0x02) bg_next_tile_attrib >>= 2;
+				bg_next_tile_attrib &= 0x03;
+				break;
+
+			case 4: 
+				// Fetch the next background tile LSB bit plane from the pattern memory
+				bg_next_tile_lsb = ppuRead((control.pattern_background << 12) 
+					                       + ((uint16_t)bg_next_tile_id << 4) 
+					                       + (vram_addr.fine_y) + 0);
+				break;
+
+			case 6:
+				// Fetch the next background tile MSB bit plane from the pattern memory
+				bg_next_tile_msb = ppuRead((control.pattern_background << 12)
+					                       + ((uint16_t)bg_next_tile_id << 4)
+					                       + (vram_addr.fine_y) + 8);
+				break;
+
+			case 7:
+				// Increment the background tile pointer to the next tile horizontally in the nametable memory
+				IncrementScrollX();
+				break;
+			}
+		}
+
+		// End of visible scanline
+		if (cycle == 256)
+		{
+			IncrementScrollY();
+		}
+
+		// Reset the x position
+		if (cycle == 257)
+		{
+			LoadBackgroundShifters();
+			TransferAddressX();
+		}
+
+		// Read tile IDs at end of scanline
+		if (cycle == 338 || cycle == 340)
+		{
+			bg_next_tile_id = ppuRead(0x2000 | (vram_addr.reg & 0x0FFF));
+		}
+
+		if (scanline == -1 && cycle >= 280 && cycle < 305)
+		{
+			// Reset the Y address
+			TransferAddressY();
+		}
+	}
+
+	if (scanline == 240)
+	{
+		// Post render scanline
+	}
+
+	if (scanline >= 241 && scanline < 261)
+	{
+		if (scanline == 241 && cycle == 1)
+		{
+			// Set vertical blank flag
+			status.vertical_blank = 1;
+
+			// Check for nonmaskable interrupt
+			if (control.enable_nmi) 
+				nmi = true;
+		}
+	}
 }
 
 olc::Sprite& olc2C02::GetPatternTable(uint8_t i, uint8_t palette)
