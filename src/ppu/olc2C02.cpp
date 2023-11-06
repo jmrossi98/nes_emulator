@@ -513,6 +513,46 @@ void olc2C02::clock()
 				nmi = true;
 		}
 	}
+
+	// Render background
+	uint8_t bg_pixel = 0x00;
+	uint8_t bg_palette = 0x00;
+
+	// Only render BG if enabled
+	if (mask.render_background)
+	{
+		// Get relevant bit
+		uint16_t bit_mux = 0x8000 >> fine_x;
+
+		// Select plane pixels
+		uint8_t p0_pixel = (bg_shifter_pattern_lo & bit_mux) > 0;
+		uint8_t p1_pixel = (bg_shifter_pattern_hi & bit_mux) > 0;
+
+		// Find pixel index
+		bg_pixel = (p1_pixel << 1) | p0_pixel;
+
+		// Get palette
+		uint8_t bg_pal0 = (bg_shifter_attrib_lo & bit_mux) > 0;
+		uint8_t bg_pal1 = (bg_shifter_attrib_hi & bit_mux) > 0;
+		bg_palette = (bg_pal1 << 1) | bg_pal0;
+	}
+
+	// Draw pixel
+	sprScreen->SetPixel(cycle - 1, scanline, GetColourFromPaletteRam(bg_palette, bg_pixel));
+
+	// Frame completed
+	cycle++;
+	if (cycle >= 341)
+	{
+		cycle = 0;
+		scanline++;
+		if (scanline >= 261)
+		{
+			scanline = -1;
+			frame_complete = true;
+		}
+	}
+
 }
 
 olc::Sprite& olc2C02::GetPatternTable(uint8_t i, uint8_t palette)
