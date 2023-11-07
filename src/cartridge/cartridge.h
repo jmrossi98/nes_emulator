@@ -45,4 +45,6 @@ public:
 	// PPU bus comms
 	bool ppuRead(uint16_t addr, uint8_t &data);
 	bool ppuWrite(uint16_t addr, uint8_t data);
+
+	void reset();
 };
