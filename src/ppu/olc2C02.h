@@ -74,6 +74,7 @@ private:
 		uint8_t reg;
 	} mask;
 
+	// "Loopy" register
 	union loopy_register
 	{
 		struct
@@ -90,6 +91,7 @@ private:
 		uint16_t reg = 0x0000;
 	};
 	
+	// PPU control register
 	union PPUCTRL
 	{
 		struct
@@ -127,6 +129,26 @@ private:
 	uint16_t bg_shifter_attrib_lo  = 0x0000;
 	uint16_t bg_shifter_attrib_hi  = 0x0000;
 
+	// Sprite Rendering
+	struct sObjectAttributeEntry
+	{
+		uint8_t y;
+		uint8_t id;
+		uint8_t attribute;
+		uint8_t x;
+	} OAM[64];
+	sObjectAttributeEntry spriteScanline[8];
+	uint8_t sprite_count;
+	uint8_t sprite_shifter_pattern_lo[8];
+	uint8_t sprite_shifter_pattern_hi[8];
+
+	// Address for when CPU inits OAM
+	uint8_t oam_addr = 0x00;
+
+	// Zero collision flags
+	bool bSpriteZeroHitPossible = false;
+	bool bSpriteZeroBeingRendered = false;
+
 public:
     // Main bus comms
     uint8_t cpuRead(uint16_t addr, bool rdonly = false);
@@ -140,4 +162,7 @@ public:
     void clock();
 	void reset();
 	bool nmi = false;
+
+	// Need write access for OAM
+	uint8_t* pOAM = (uint8_t*)OAM;
 };
