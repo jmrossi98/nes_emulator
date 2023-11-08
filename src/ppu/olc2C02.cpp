@@ -479,7 +479,7 @@ void olc2C02::clock()
 
 	// Pre render scanline sets up shifters for next visible scanline
 	if (scanline >= -1 && scanline < 240)
-	{		
+	{
 
 	//////////////////////////////////////////////////////////////////////////////////
 	// Background
@@ -821,8 +821,71 @@ void olc2C02::clock()
 		}		
 	}
 
+	// Final pixel/palette
+	uint8_t pixel = 0x00;
+	uint8_t palette = 0x00;
+
+	// Both transparent
+	if (bg_pixel == 0 && fg_pixel == 0)
+	{
+		pixel = 0x00;
+		palette = 0x00;
+	}
+
+	// Only FG visible
+	else if (bg_pixel == 0 && fg_pixel > 0)
+	{
+		pixel = fg_pixel;
+		palette = fg_palette;
+	}
+
+	// Only BG visible
+	else if (bg_pixel > 0 && fg_pixel == 0)
+	{
+		pixel = bg_pixel;
+		palette = bg_palette;
+	}
+
+	// Both visible
+	else if (bg_pixel > 0 && fg_pixel > 0)
+	{
+		if (fg_priority)
+		{
+			pixel = fg_pixel;
+			palette = fg_palette;
+		}
+		else
+		{
+			pixel = bg_pixel;
+			palette = bg_palette;
+		}
+
+		// Check 0th sprite hit
+		if (bSpriteZeroHitPossible && bSpriteZeroBeingRendered)
+		{
+			// Collision found
+			if (mask.render_background & mask.render_sprites)
+			{
+				if (~(mask.render_background_left | mask.render_sprites_left))
+				{
+					if (cycle >= 9 && cycle < 258)
+					{
+						status.sprite_zero_hit = 1;
+					}
+				}
+				else
+				{
+					if (cycle >= 1 && cycle < 258)
+					{
+						status.sprite_zero_hit = 1;
+					}
+				}
+			}
+		}
+	}
+
 	// Draw pixel
-	sprScreen->SetPixel(cycle - 1, scanline, GetColourFromPaletteRam(bg_palette, bg_pixel));
+	sprScreen->SetPixel(cycle - 1, scanline, GetColourFromPaletteRam(palette, pixel));
 
 	// Frame completed
 	cycle++;
