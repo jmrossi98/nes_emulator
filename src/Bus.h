@@ -31,6 +31,7 @@ public: // Devices on bus
 	uint8_t controller[2];
 
 public:
+    // Read/write on CPU
     void cpuWrite(uint16_t addr, uint8_t data);
     uint8_t cpuRead(uint16_t addr, bool bReadOnly = false);
 
@@ -40,6 +41,16 @@ public:
 	void clock();
 
 private:
+    // Keep track of clock cycles
 	uint32_t nSystemClockCounter = 0;
+
+    // Track controller state
     uint8_t controller_state[2];
+
+    // Direct Memory Access varialbes
+	uint8_t dma_page = 0x00;
+	uint8_t dma_addr = 0x00;
+	uint8_t dma_data = 0x00;
+	bool dma_dummy = true;
+	bool dma_transfer = false;
 };
