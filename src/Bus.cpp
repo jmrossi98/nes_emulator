@@ -22,6 +22,13 @@ void Bus::cpuWrite(uint16_t addr, uint8_t data)
 	{
 		ppu.cpuWrite(addr & 0x0007, data);
 	}
+	else if (addr == 0x4014)
+	{
+		// A write to this address initiates a DMA transfer
+		dma_page = data;
+		dma_addr = 0x00;
+		dma_transfer = true;						
+	}
 	else if (addr >= 0x4016 && addr <= 0x4017)
 	{
 		controller_state[addr & 0x0001] = controller[addr & 0x0001];
@@ -64,14 +71,55 @@ void Bus::reset()
 	cpu.reset();
 	ppu.reset();
 	nSystemClockCounter = 0;
+	dma_page = 0x00;
+	dma_addr = 0x00;
+	dma_data = 0x00;
+	dma_dummy = true;
+	dma_transfer = false;
 }
 
 void Bus::clock()
 {
 	ppu.clock();
 	if (nSystemClockCounter % 3 == 0)
-	{
-		cpu.clock();
+{
+		// Check for Direct Memory Access
+		if (dma_transfer)
+		{
+			if (dma_dummy)
+			{
+				if (nSystemClockCounter % 2 == 1)
+				{
+					dma_dummy = false;
+				}
+			}
+			else
+			{
+				// Start DMA
+				if (nSystemClockCounter % 2 == 0)
+				{
+					// Read from CPU bus on even cycles
+					dma_data = cpuRead(dma_page << 8 | dma_addr);
+				}
+				else
+				{
+					// Write to PPU OAM on odd cycles
+					ppu.pOAM[dma_addr] = dma_data;
+					dma_addr++;
+
+					// End DMA transfer if wrapped around
+					if (dma_addr == 0x00)
+					{
+						dma_transfer = false;
+						dma_dummy = true;
+					}
+				}
+			}
+		}
+		else
+		{
+			cpu.clock();
+		}		
 	}
 
 	if (ppu.nmi)

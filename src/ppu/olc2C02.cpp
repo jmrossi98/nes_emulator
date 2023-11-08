@@ -41,7 +41,7 @@ olc::Sprite& olc2C02::GetPatternTable(uint8_t i, uint8_t palette)
 				// Iterate through the 8-bit words, combining them to give us the final pixel index
 				for (uint16_t col = 0; col < 8; col++)
 				{
-					uint8_t pixel = (tile_lsb & 0x01) + (tile_msb & 0x01);
+					uint8_t pixel = (tile_lsb & 0x01) << 1 | (tile_msb & 0x01);
 
 					// Shift the row words 1 bit right for each column of the character.
 					tile_lsb >>= 1; tile_msb >>= 1;
@@ -134,6 +134,7 @@ uint8_t olc2C02::cpuRead(uint16_t addr, bool rdonly)
 		case 0x0003: // OAM Address
 			break;
 		case 0x0004: // OAM Data
+			data = pOAM[oam_addr];
 			break;
 		case 0x0005: // Scroll
 			break;
@@ -174,8 +175,10 @@ void olc2C02::cpuWrite(uint16_t addr, uint8_t data)
 	case 0x0002: // Status
 		break;
 	case 0x0003: // OAM Address
+		oam_addr = data;
 		break;
 	case 0x0004: // OAM Data
+		pOAM[oam_addr] = data;
 		break;
 	case 0x0005: // Scroll
 		if (address_latch == 0)
@@ -456,11 +459,32 @@ void olc2C02::clock()
 			bg_shifter_attrib_lo <<= 1;
 			bg_shifter_attrib_hi <<= 1;
 		}
+
+		if (mask.render_sprites && cycle >= 1 && cycle < 258)
+		{
+			for (int i = 0; i < sprite_count; i++)
+			{
+				if (spriteScanline[i].x > 0)
+				{
+					spriteScanline[i].x--;
+				}
+				else
+				{
+					sprite_shifter_pattern_lo[i] <<= 1;
+					sprite_shifter_pattern_hi[i] <<= 1;
+				}
+			}
+		}
 	};
 
 	// Pre render scanline sets up shifters for next visible scanline
 	if (scanline >= -1 && scanline < 240)
-	{		
+	{
+
+	//////////////////////////////////////////////////////////////////////////////////
+	// Background
+	//////////////////////////////////////////////////////////////////////////////////
+
 		if (scanline == 0 && cycle == 0)
 		{
 			// Skip cycle
@@ -471,6 +495,19 @@ void olc2C02::clock()
 		{
 			// Clear vertical blank flag
 			status.vertical_blank = 0;
+
+			// Clear sprite overflow flag
+			status.sprite_overflow = 0;
+			
+			// Clear the sprite zero hit flag
+			status.sprite_zero_hit = 0;
+
+			// Clear Shifters
+			for (int i = 0; i < 8; i++)
+			{
+				sprite_shifter_pattern_lo[i] = 0;
+				sprite_shifter_pattern_hi[i] = 0;
+			}
 		}
 
 		// Work with visible data
@@ -547,6 +584,161 @@ void olc2C02::clock()
 			// Reset the Y address
 			TransferAddressY();
 		}
+
+
+	//////////////////////////////////////////////////////////////////////////////////
+	// Foreground
+	//////////////////////////////////////////////////////////////////////////////////
+
+
+		if (cycle == 257 && scanline >= 0)
+		{
+			// End of visible, determine sprite info for next scanline
+			std::memset(spriteScanline, 0xFF, 8 * sizeof(sObjectAttributeEntry));
+			sprite_count = 0;
+
+			// Clear sprite pattern shifters
+			for (uint8_t i = 0; i < 8; i++)
+			{
+				sprite_shifter_pattern_lo[i] = 0;
+				sprite_shifter_pattern_hi[i] = 0;
+			}
+
+			// Iterate through OAM memory
+			uint8_t nOAMEntry = 0;
+			bSpriteZeroHitPossible = false;
+			while (nOAMEntry < 64 && sprite_count < 9)
+			{
+				int16_t diff = ((int16_t)scanline - (int16_t)OAM[nOAMEntry].y);
+
+				// Check sprite height mode
+				if (diff >= 0 && diff < (control.sprite_size ? 16 : 8))
+				{
+					// Copy entry over to scanline sprite cache
+					if (sprite_count < 8)
+					{
+						// If 0th sprite, flag potential zero hit
+						if (nOAMEntry == 0)
+						{
+							bSpriteZeroHitPossible = true;
+						}
+						memcpy(&spriteScanline[sprite_count], &OAM[nOAMEntry], sizeof(sObjectAttributeEntry));
+						sprite_count++;
+					}				
+				}
+				nOAMEntry++;
+			}
+
+			// Set sprite overflow flag
+			status.sprite_overflow = (sprite_count > 8);
+		}
+
+		if (cycle == 340)
+		{
+			// Prepare shifters for current sprites
+			for (uint8_t i = 0; i < sprite_count; i++)
+			{
+
+				// Get row patterns of sprite
+				uint8_t sprite_pattern_bits_lo, sprite_pattern_bits_hi;
+				uint16_t sprite_pattern_addr_lo, sprite_pattern_addr_hi;
+
+				// Get addresses that contain pattern data
+				if (!control.sprite_size)
+				{
+					// 8x8 Sprite Mode
+					if (!(spriteScanline[i].attribute & 0x80))
+					{
+						// Sprite is normal
+						sprite_pattern_addr_lo =
+						(control.pattern_sprite << 12) // Pattern Table: 0KB or 4KB offset
+						| (spriteScanline[i].id << 4) // Cell: Tile ID * 16 (16 bytes per tile)
+						| (scanline - spriteScanline[i].y); // Row in cell: (0->7)
+												
+					}
+					else
+					{
+						// Sprite is upside down
+						sprite_pattern_addr_lo =
+						(control.pattern_sprite << 12) // Pattern Table: 0KB or 4KB offset
+						| (spriteScanline[i].id << 4) // Cell: Tile ID * 16 (16 bytes per tile)
+						| (7 - (scanline - spriteScanline[i].y)); // Row in cell: (7->0)
+					}
+
+				}
+				else
+				{
+					// 8x16 Sprite Mode
+					if (!(spriteScanline[i].attribute & 0x80))
+					{
+						// Sprite is normal
+						if (scanline - spriteScanline[i].y < 8)
+						{
+							// Reading top half
+							sprite_pattern_addr_lo =
+							((spriteScanline[i].id & 0x01) << 12) // Pattern Table: 0KB or 4KB offset
+							| ((spriteScanline[i].id & 0xFE) << 4) // Cell: Tile ID * 16 (16 bytes per tile)
+							| ((scanline - spriteScanline[i].y) & 0x07); // Row in cell: (0->7)
+						}
+						else
+						{
+							// Reading bottom half
+							sprite_pattern_addr_lo =
+							( (spriteScanline[i].id & 0x01) << 12) // Pattern Table: 0KB or 4KB offset
+							| (((spriteScanline[i].id & 0xFE) + 1) << 4) // Cell: Tile ID * 16 (16 bytes per tile)
+							| ((scanline - spriteScanline[i].y) & 0x07); // Row in cell: (0->7)
+						}
+					}
+					else
+					{
+						// Sprite is upside down
+						if (scanline - spriteScanline[i].y < 8)
+						{
+							// Reading top half
+							sprite_pattern_addr_lo =
+							( (spriteScanline[i].id & 0x01) << 12) // Pattern Table: 0KB or 4KB offset
+							| (((spriteScanline[i].id & 0xFE) + 1) << 4) // Cell: Tile ID * 16 (16 bytes per tile)
+							| (7 - (scanline - spriteScanline[i].y) & 0x07); // Row in cell: (0->7)
+						}
+						else
+						{
+							// Reading bottom half
+							sprite_pattern_addr_lo =
+							((spriteScanline[i].id & 0x01) << 12) // Pattern Table: 0KB or 4KB offset
+							| ((spriteScanline[i].id & 0xFE) << 4) // Cell: Tile ID * 16 (16 bytes per tile)
+							| (7 - (scanline - spriteScanline[i].y) & 0x07); // Row in cell: (0->7)
+						}
+					}
+				}
+
+				// Hi bit plane equivalent is always offset by 8 bytes from lo bit plane
+				sprite_pattern_addr_hi = sprite_pattern_addr_lo + 8;
+
+				// Read addr of sprite patterns
+				sprite_pattern_bits_lo = ppuRead(sprite_pattern_addr_lo);
+				sprite_pattern_bits_hi = ppuRead(sprite_pattern_addr_hi);
+
+				// Flip pattern bytes if needed
+				if (spriteScanline[i].attribute & 0x40)
+				{
+					auto flipbyte = [](uint8_t b)
+					{
+						b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
+						b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
+						b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
+						return b;
+					};
+
+					// Flip patterns horizontally
+					sprite_pattern_bits_lo = flipbyte(sprite_pattern_bits_lo);
+					sprite_pattern_bits_hi = flipbyte(sprite_pattern_bits_hi);
+				}
+
+				// Load the pattern into sprite shift registers
+				sprite_shifter_pattern_lo[i] = sprite_pattern_bits_lo;
+				sprite_shifter_pattern_hi[i] = sprite_pattern_bits_hi;
+			}
+		}
 	}
 
 	if (scanline == 240)
@@ -567,7 +759,9 @@ void olc2C02::clock()
 		}
 	}
 
+	//////////////////////////////////////////////////////////////////////////////////
 	// Render background
+	//////////////////////////////////////////////////////////////////////////////////
 	uint8_t bg_pixel = 0x00;
 	uint8_t bg_palette = 0x00;
 
@@ -590,8 +784,108 @@ void olc2C02::clock()
 		bg_palette = (bg_pal1 << 1) | bg_pal0;
 	}
 
+	//////////////////////////////////////////////////////////////////////////////////
+	// Render foreground
+	//////////////////////////////////////////////////////////////////////////////////
+	uint8_t fg_pixel = 0x00;
+	uint8_t fg_palette = 0x00;
+	uint8_t fg_priority = 0x00;
+	if (mask.render_sprites)
+	{
+		// Iterate through all sprites
+		bSpriteZeroBeingRendered = false;
+		for (uint8_t i = 0; i < sprite_count; i++)
+		{
+			// Check for collision
+			if (spriteScanline[i].x == 0) 
+			{
+				// Use the MSB of the shifter
+				uint8_t fg_pixel_lo = (sprite_shifter_pattern_lo[i] & 0x80) > 0;
+				uint8_t fg_pixel_hi = (sprite_shifter_pattern_hi[i] & 0x80) > 0;
+				fg_pixel = (fg_pixel_hi << 1) | fg_pixel_lo;
+
+				// Get palette from the bottom two bits
+				fg_palette = (spriteScanline[i].attribute & 0x03) + 0x04;
+				fg_priority = (spriteScanline[i].attribute & 0x20) == 0;
+
+				// Render pixel if visible
+				if (fg_pixel != 0)
+				{
+					if (i == 0)
+					{
+						bSpriteZeroBeingRendered = true;
+					}
+					break;
+				}				
+			}
+		}		
+	}
+
+	// Final pixel/palette
+	uint8_t pixel = 0x00;
+	uint8_t palette = 0x00;
+
+	// Both transparent
+	if (bg_pixel == 0 && fg_pixel == 0)
+	{
+		pixel = 0x00;
+		palette = 0x00;
+	}
+
+	// Only FG visible
+	else if (bg_pixel == 0 && fg_pixel > 0)
+	{
+		pixel = fg_pixel;
+		palette = fg_palette;
+	}
+
+	// Only BG visible
+	else if (bg_pixel > 0 && fg_pixel == 0)
+	{
+		pixel = bg_pixel;
+		palette = bg_palette;
+	}
+
+	// Both visible
+	else if (bg_pixel > 0 && fg_pixel > 0)
+	{
+		if (fg_priority)
+		{
+			pixel = fg_pixel;
+			palette = fg_palette;
+		}
+		else
+		{
+			pixel = bg_pixel;
+			palette = bg_palette;
+		}
+
+		// Check 0th sprite hit
+		if (bSpriteZeroHitPossible && bSpriteZeroBeingRendered)
+		{
+			// Collision found
+			if (mask.render_background & mask.render_sprites)
+			{
+				if (~(mask.render_background_left | mask.render_sprites_left))
+				{
+					if (cycle >= 9 && cycle < 258)
+					{
+						status.sprite_zero_hit = 1;
+					}
+				}
+				else
+				{
+					if (cycle >= 1 && cycle < 258)
+					{
+						status.sprite_zero_hit = 1;
+					}
+				}
+			}
+		}
+	}
+
 	// Draw pixel
-	sprScreen->SetPixel(cycle - 1, scanline, GetColourFromPaletteRam(bg_palette, bg_pixel));
+	sprScreen->SetPixel(cycle - 1, scanline, GetColourFromPaletteRam(palette, pixel));
 
 	// Frame completed
 	cycle++;
