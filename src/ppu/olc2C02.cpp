@@ -759,7 +759,9 @@ void olc2C02::clock()
 		}
 	}
 
+	//////////////////////////////////////////////////////////////////////////////////
 	// Render background
+	//////////////////////////////////////////////////////////////////////////////////
 	uint8_t bg_pixel = 0x00;
 	uint8_t bg_palette = 0x00;
 
@@ -780,6 +782,43 @@ void olc2C02::clock()
 		uint8_t bg_pal0 = (bg_shifter_attrib_lo & bit_mux) > 0;
 		uint8_t bg_pal1 = (bg_shifter_attrib_hi & bit_mux) > 0;
 		bg_palette = (bg_pal1 << 1) | bg_pal0;
+	}
+
+	//////////////////////////////////////////////////////////////////////////////////
+	// Render foreground
+	//////////////////////////////////////////////////////////////////////////////////
+	uint8_t fg_pixel = 0x00;
+	uint8_t fg_palette = 0x00;
+	uint8_t fg_priority = 0x00;
+	if (mask.render_sprites)
+	{
+		// Iterate through all sprites
+		bSpriteZeroBeingRendered = false;
+		for (uint8_t i = 0; i < sprite_count; i++)
+		{
+			// Check for collision
+			if (spriteScanline[i].x == 0) 
+			{
+				// Use the MSB of the shifter
+				uint8_t fg_pixel_lo = (sprite_shifter_pattern_lo[i] & 0x80) > 0;
+				uint8_t fg_pixel_hi = (sprite_shifter_pattern_hi[i] & 0x80) > 0;
+				fg_pixel = (fg_pixel_hi << 1) | fg_pixel_lo;
+
+				// Get palette from the bottom two bits
+				fg_palette = (spriteScanline[i].attribute & 0x03) + 0x04;
+				fg_priority = (spriteScanline[i].attribute & 0x20) == 0;
+
+				// Render pixel if visible
+				if (fg_pixel != 0)
+				{
+					if (i == 0)
+					{
+						bSpriteZeroBeingRendered = true;
+					}
+					break;
+				}				
+			}
+		}		
 	}
 
 	// Draw pixel
