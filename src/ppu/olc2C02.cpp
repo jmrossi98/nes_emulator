@@ -632,6 +632,113 @@ void olc2C02::clock()
 			// Set sprite overflow flag
 			status.sprite_overflow = (sprite_count > 8);
 		}
+
+		if (cycle == 340)
+		{
+			// Prepare shifters for current sprites
+			for (uint8_t i = 0; i < sprite_count; i++)
+			{
+
+				// Get row patterns of sprite
+				uint8_t sprite_pattern_bits_lo, sprite_pattern_bits_hi;
+				uint16_t sprite_pattern_addr_lo, sprite_pattern_addr_hi;
+
+				// Get addresses that contain pattern data
+				if (!control.sprite_size)
+				{
+					// 8x8 Sprite Mode
+					if (!(spriteScanline[i].attribute & 0x80))
+					{
+						// Sprite is normal
+						sprite_pattern_addr_lo =
+						(control.pattern_sprite << 12) // Pattern Table: 0KB or 4KB offset
+						| (spriteScanline[i].id << 4) // Cell: Tile ID * 16 (16 bytes per tile)
+						| (scanline - spriteScanline[i].y); // Row in cell: (0->7)
+												
+					}
+					else
+					{
+						// Sprite is upside down
+						sprite_pattern_addr_lo =
+						(control.pattern_sprite << 12) // Pattern Table: 0KB or 4KB offset
+						| (spriteScanline[i].id << 4) // Cell: Tile ID * 16 (16 bytes per tile)
+						| (7 - (scanline - spriteScanline[i].y)); // Row in cell: (7->0)
+					}
+
+				}
+				else
+				{
+					// 8x16 Sprite Mode
+					if (!(spriteScanline[i].attribute & 0x80))
+					{
+						// Sprite is normal
+						if (scanline - spriteScanline[i].y < 8)
+						{
+							// Reading top half
+							sprite_pattern_addr_lo =
+							((spriteScanline[i].id & 0x01) << 12) // Pattern Table: 0KB or 4KB offset
+							| ((spriteScanline[i].id & 0xFE) << 4) // Cell: Tile ID * 16 (16 bytes per tile)
+							| ((scanline - spriteScanline[i].y) & 0x07); // Row in cell: (0->7)
+						}
+						else
+						{
+							// Reading bottom half
+							sprite_pattern_addr_lo =
+							( (spriteScanline[i].id & 0x01) << 12) // Pattern Table: 0KB or 4KB offset
+							| (((spriteScanline[i].id & 0xFE) + 1) << 4) // Cell: Tile ID * 16 (16 bytes per tile)
+							| ((scanline - spriteScanline[i].y) & 0x07); // Row in cell: (0->7)
+						}
+					}
+					else
+					{
+						// Sprite is upside down
+						if (scanline - spriteScanline[i].y < 8)
+						{
+							// Reading top half
+							sprite_pattern_addr_lo =
+							( (spriteScanline[i].id & 0x01) << 12) // Pattern Table: 0KB or 4KB offset
+							| (((spriteScanline[i].id & 0xFE) + 1) << 4) // Cell: Tile ID * 16 (16 bytes per tile)
+							| (7 - (scanline - spriteScanline[i].y) & 0x07); // Row in cell: (0->7)
+						}
+						else
+						{
+							// Reading bottom half
+							sprite_pattern_addr_lo =
+							((spriteScanline[i].id & 0x01) << 12) // Pattern Table: 0KB or 4KB offset
+							| ((spriteScanline[i].id & 0xFE) << 4) // Cell: Tile ID * 16 (16 bytes per tile)
+							| (7 - (scanline - spriteScanline[i].y) & 0x07); // Row in cell: (0->7)
+						}
+					}
+				}
+
+				// Hi bit plane equivalent is always offset by 8 bytes from lo bit plane
+				sprite_pattern_addr_hi = sprite_pattern_addr_lo + 8;
+
+				// Read addr of sprite patterns
+				sprite_pattern_bits_lo = ppuRead(sprite_pattern_addr_lo);
+				sprite_pattern_bits_hi = ppuRead(sprite_pattern_addr_hi);
+
+				// Flip pattern bytes if needed
+				if (spriteScanline[i].attribute & 0x40)
+				{
+					auto flipbyte = [](uint8_t b)
+					{
+						b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
+						b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
+						b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
+						return b;
+					};
+
+					// Flip patterns horizontally
+					sprite_pattern_bits_lo = flipbyte(sprite_pattern_bits_lo);
+					sprite_pattern_bits_hi = flipbyte(sprite_pattern_bits_hi);
+				}
+
+				// Load the pattern into sprite shift registers
+				sprite_shifter_pattern_lo[i] = sprite_pattern_bits_lo;
+				sprite_shifter_pattern_hi[i] = sprite_pattern_bits_hi;
+			}
+		}
 	}
 
 	if (scanline == 240)
