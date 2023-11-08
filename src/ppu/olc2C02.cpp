@@ -490,6 +490,19 @@ void olc2C02::clock()
 		{
 			// Clear vertical blank flag
 			status.vertical_blank = 0;
+
+			// Clear sprite overflow flag
+			status.sprite_overflow = 0;
+			
+			// Clear the sprite zero hit flag
+			status.sprite_zero_hit = 0;
+
+			// Clear Shifters
+			for (int i = 0; i < 8; i++)
+			{
+				sprite_shifter_pattern_lo[i] = 0;
+				sprite_shifter_pattern_hi[i] = 0;
+			}
 		}
 
 		// Work with visible data
