@@ -134,6 +134,7 @@ uint8_t olc2C02::cpuRead(uint16_t addr, bool rdonly)
 		case 0x0003: // OAM Address
 			break;
 		case 0x0004: // OAM Data
+			data = pOAM[oam_addr];
 			break;
 		case 0x0005: // Scroll
 			break;
@@ -174,8 +175,10 @@ void olc2C02::cpuWrite(uint16_t addr, uint8_t data)
 	case 0x0002: // Status
 		break;
 	case 0x0003: // OAM Address
+		oam_addr = data;
 		break;
 	case 0x0004: // OAM Data
+		pOAM[oam_addr] = data;
 		break;
 	case 0x0005: // Scroll
 		if (address_latch == 0)
