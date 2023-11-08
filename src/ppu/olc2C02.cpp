@@ -459,6 +459,22 @@ void olc2C02::clock()
 			bg_shifter_attrib_lo <<= 1;
 			bg_shifter_attrib_hi <<= 1;
 		}
+
+		if (mask.render_sprites && cycle >= 1 && cycle < 258)
+		{
+			for (int i = 0; i < sprite_count; i++)
+			{
+				if (spriteScanline[i].x > 0)
+				{
+					spriteScanline[i].x--;
+				}
+				else
+				{
+					sprite_shifter_pattern_lo[i] <<= 1;
+					sprite_shifter_pattern_hi[i] <<= 1;
+				}
+			}
+		}
 	};
 
 	// Pre render scanline sets up shifters for next visible scanline
