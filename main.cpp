@@ -10,7 +10,8 @@
 class Demo_olc2C02 : public olc::PixelGameEngine
 {
 public:
-	Demo_olc2C02() { sAppName = "olc2C02 Demonstration"; }
+	Demo_olc2C02() { sAppName = "RETRoNES"; }
+	std::string rom_url;
 
 private: 
 	// The NES
@@ -22,7 +23,7 @@ private:
 	bool OnUserCreate()
 	{
 		// Load the cartridge
-		cart = std::make_shared<Cartridge>("");
+		cart = std::make_shared<Cartridge>(rom_url);
 		
 		if (!cart->ImageValid())
 			return false;
@@ -68,9 +69,10 @@ private:
 	}
 };
 
-int main()
+int main(int argc, char* argv[])
 {
 	Demo_olc2C02 demo;
+	demo.rom_url = argv[1];
 	demo.Construct(780, 480, 2, 2, true);
 	demo.Start();
 	return 0;
