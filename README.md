@@ -24,6 +24,13 @@ $ cd nes_emulator
 $ make build
 ```
 
+## Running
+
+Specify the ROM path
+
+```
+$ ./RETRoNES ~/Games/Super Mario Bros.nes
+```
 
 ## Controller
 
