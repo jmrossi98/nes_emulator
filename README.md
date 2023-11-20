@@ -15,8 +15,14 @@ https://github.com/OneLoneCoder/olcPixelGameEngine
 
 ## Compiling
 
-Required:
-* C++17 compliant compiler
+Compiled with g++ 13.2 as C++17
+
+On Windows 10:
+```
+$ git clone https://github.com/jmrossi98/nes_emulator
+$ cd nes_emulator
+$ make build
+```
 
 
 ## Controller
