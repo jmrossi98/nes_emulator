@@ -7,7 +7,11 @@ RETRoNES
 
 A basic NES emulator written in C++ for learning purposes.
 
-NOTE: The current version of the emulator does not include sound and only supports player one. These features are to be added later.
+NOTE: The current version of the emulator does not include sound and only supports player one.
+
+The emulator makes use of OneLoneCoder's OLC Pixel Game Engine:
+
+https://github.com/OneLoneCoder/olcPixelGameEngine
 
 ## Compiling
 
