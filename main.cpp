@@ -1,11 +1,11 @@
 #include <iostream>
 #include <sstream>
 
-#include "src/Bus.h"
-#include "src/cpu/olc6502.h"
+#include "Bus.h"
+#include "olc6502.h"
 
 #define OLC_PGE_APPLICATION
-#include "lib/olcPixelGameEngine.h"
+#include "olcPixelGameEngine.h"
 
 class Demo_olc2C02 : public olc::PixelGameEngine
 {
