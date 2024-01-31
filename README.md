@@ -13,15 +13,28 @@ The emulator makes use of OneLoneCoder's OLC Pixel Game Engine:
 
 https://github.com/OneLoneCoder/olcPixelGameEngine
 
+## Installation
+
+You'll need to install the required build tools and libraries
+
+On Ubuntu 20.04/22.04 and distros based on each:
+```
+$ sudo apt update
+$ sudo apt install build-essential libgl-dev libx11-dev libxi-dev libglu1-mesa-dev libpng-dev
+```
+
 ## Compiling
 
-Compiled with g++ 13.2 as C++17
+You'll need:
+* C++17 compliant compiler
+* CMake
 
-On Windows 10:
 ```
 $ git clone https://github.com/jmrossi98/nes_emulator
 $ cd nes_emulator
-$ make build
+$ mkdir build/ && cd build/
+$ cmake ..
+$ make -j$(nproc)
 ```
 
 ## Running
