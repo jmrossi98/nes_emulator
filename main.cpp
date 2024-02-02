@@ -69,10 +69,11 @@ private:
 	}
 };
 
-int main(int argc, char* argv[])
+int main(int argc, char **argv)
 {
+	const char *file = argv[1];
 	Demo_olc2C02 demo;
-	demo.rom_url = argv[1];
+	demo.rom_url = file;
 	demo.Construct(780, 480, 2, 2, true);
 	demo.Start();
 	return 0;
