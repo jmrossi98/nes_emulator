@@ -69,3 +69,12 @@ To end emulation, press ESC.
  Down          | ↓
  Left          | ←
  Right         | →
+
+## Screenshots
+
+![Screenshot 1](images/mb.png)
+![Screenshot 2](images/smb.png)
+![Screenshot 3](images/dk.png)
+![Screenshot 4](images/excitebike.png)
+![Screenshot 5](images/iceclimbers.png)
+![Screenshot 6](images/bomberman.png)
