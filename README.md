@@ -39,7 +39,7 @@ make -j%NUMBER_OF_PROCESSORS%
 ### Ubuntu 20.04:
 ```
 $ sudo apt update
-$ sudo apt install build-essential libgl-dev libx11-dev libxi-dev libglu1-mesa-dev libpng-dev
+$ sudo apt install build-essential libgl-dev libx11-dev libxi-dev libglu1-mesa-dev libpng-dev libasound2-dev
 $ git clone https://github.com/jmrossi98/nes_emulator
 $ cd nes_emulator
 $ mkdir build/ && cd build/

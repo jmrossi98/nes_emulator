@@ -13,11 +13,11 @@ include_directories("${PROJECT_SOURCE_DIR}/include")
 
 add_executable(RETRoNES ${SOURCES})
 if (WIN32)
-    target_link_libraries(RETRoNES -luser32 -lgdi32 -lopengl32 -lgdiplus -lShlwapi -ldwmapi -lstdc++fs)
+    target_link_libraries(RETRoNES -luser32 -lgdi32 -lopengl32 -lgdiplus -lShlwapi -ldwmapi -lwinmm -lstdc++fs)
 endif (WIN32)
 
 if (UNIX)
-    target_link_libraries(RETRoNES -lX11 -lGL -lpthread -lpng -lstdc++fs)
+    target_link_libraries(RETRoNES -lX11 -lGL -lpthread -lpng -lasound -lstdc++fs)
 endif (UNIX)
 
 set_property(TARGET RETRoNES PROPERTY CXX_STANDARD 17)
