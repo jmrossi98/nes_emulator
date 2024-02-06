@@ -28,9 +28,10 @@ Cartridge::Cartridge(const std::string& sFileName)
 		}
 
 		nMapperID = ((header.mapper2 >> 4) << 4) | (header.mapper1 >> 4);
-		mirror = (header.mapper1 & 0x01) ? VERTICAL : HORIZONTAL;
+		hw_mirror = (header.mapper1 & 0x01) ? VERTICAL : HORIZONTAL;
 
 		uint8_t nFileType = 1;
+		if ((header.mapper2 & 0x0C) == 0x08) nFileType = 2;
 
 		if (nFileType == 0)
 		{
@@ -59,13 +60,24 @@ Cartridge::Cartridge(const std::string& sFileName)
 
 		if (nFileType == 2)
 		{
-			// fill in later
+			nPRGBanks = ((header.prg_ram_size & 0x07) << 8) | header.prg_rom_chunks;
+			vPRGMemory.resize(nPRGBanks * 16384);
+			ifs.read((char*)vPRGMemory.data(), vPRGMemory.size());
+
+			nCHRBanks = ((header.prg_ram_size & 0x38) << 8) | header.chr_rom_chunks;
+			vCHRMemory.resize(nCHRBanks * 8192);
+			ifs.read((char*)vCHRMemory.data(), vCHRMemory.size());
 		}
 
 		// Load mapper
 		switch (nMapperID)
 		{
 		case 0: pMapper = std::make_shared<Mapper_000>(nPRGBanks, nCHRBanks); break;
+		case 1: pMapper = std::make_shared<Mapper_001>(nPRGBanks, nCHRBanks); break;
+		case 2: pMapper = std::make_shared<Mapper_002>(nPRGBanks, nCHRBanks); break;
+		case 3: pMapper = std::make_shared<Mapper_003>(nPRGBanks, nCHRBanks); break;
+		case 4: pMapper = std::make_shared<Mapper_004>(nPRGBanks, nCHRBanks); break;
+		case 66: pMapper = std::make_shared<Mapper_066>(nPRGBanks, nCHRBanks); break;
 		}
 
 		bImageValid = true;
@@ -85,9 +97,18 @@ bool Cartridge::ImageValid()
 bool Cartridge::cpuRead(uint16_t addr, uint8_t &data)
 {
 	uint32_t mapped_addr = 0;
-	if (pMapper->cpuMapRead(addr, mapped_addr))
+	if (pMapper->cpuMapRead(addr, mapped_addr, data))
 	{
-		data = vPRGMemory[mapped_addr];
+		if (mapped_addr == 0xFFFFFFFF)
+		{
+			// Mapper has actually set the data value, for example cartridge based RAM
+			return true;
+		}
+		else
+		{
+			// Mapper has produced an offset into cartridge bank memory
+			data = vPRGMemory[mapped_addr];
+		}
 		return true;
 	}
 	else
@@ -97,9 +118,19 @@ bool Cartridge::cpuRead(uint16_t addr, uint8_t &data)
 bool Cartridge::cpuWrite(uint16_t addr, uint8_t data)
 {
 	uint32_t mapped_addr = 0;
-	if (pMapper->cpuMapWrite(addr, mapped_addr))
+	if (pMapper->cpuMapWrite(addr, mapped_addr, data))
 	{
-		vPRGMemory[mapped_addr] = data;
+		if (mapped_addr == 0xFFFFFFFF)
+		{
+			
+			// Mapper has actually set the data value, for example cartridge based RAM
+			return true;
+		}
+		else
+		{
+			// Mapper has produced an offset into cartridge bank memory
+			vPRGMemory[mapped_addr] = data;
+		}
 		return true;
 	}
 	else
@@ -121,7 +152,7 @@ bool Cartridge::ppuRead(uint16_t addr, uint8_t & data)
 bool Cartridge::ppuWrite(uint16_t addr, uint8_t data)
 {
 	uint32_t mapped_addr = 0;
-	if (pMapper->ppuMapRead(addr, mapped_addr))
+	if (pMapper->ppuMapWrite(addr, mapped_addr))
 	{
 		vCHRMemory[mapped_addr] = data;
 		return true;
@@ -135,4 +166,26 @@ void Cartridge::reset()
 	// Only reset mapper
 	if (pMapper != nullptr)
 		pMapper->reset();
+}
+
+MIRROR Cartridge::Mirror()
+{
+	MIRROR m = pMapper->mirror();
+	if (m == MIRROR::HARDWARE)
+	{
+		// Mirror configuration was defined
+		// in hardware via soldering
+		return hw_mirror;
+	}
+	else
+	{
+		// Mirror configuration can be
+		// dynamically set via mapper
+		return m;
+	}
+}
+
+std::shared_ptr<Mapper> Cartridge::GetMapper()
+{
+	return pMapper;
 }

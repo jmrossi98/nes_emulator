@@ -7,12 +7,16 @@ Bus::Bus()
 }
 
 Bus::~Bus(){}
+void Bus::SetSampleFrequency(uint32_t sample_rate)
+{
+	dAudioTimePerSystemSample = 1.0 / (double)sample_rate;
+	dAudioTimePerNESClock = 1.0 / 5369318.0; // PPU Clock Frequency
+}
 
 void Bus::cpuWrite(uint16_t addr, uint8_t data)
 {	
 	if (cart->cpuWrite(addr, data))
 	{
-		// Leaving blank to give cartridge highest priority for bus transactions
 	}
 	else if (addr >= 0x0000 && addr <= 0x1FFF)
 	{
@@ -21,6 +25,10 @@ void Bus::cpuWrite(uint16_t addr, uint8_t data)
 	else if (addr >= 0x2000 && addr <= 0x3FFF)
 	{
 		ppu.cpuWrite(addr & 0x0007, data);
+	}	
+	else if ((addr >= 0x4000 && addr <= 0x4013) || addr == 0x4015 || addr == 0x4017) //  NES APU
+	{
+		apu.cpuWrite(addr, data);
 	}
 	else if (addr == 0x4014)
 	{
@@ -40,15 +48,21 @@ uint8_t Bus::cpuRead(uint16_t addr, bool bReadOnly)
 	uint8_t data = 0x00;	
 	if (cart->cpuRead(addr, data))
 	{
-		// Leaving blank to give cartridge highest priority for bus transactions
+		// Cartridge Address Range
 	}
 	else if (addr >= 0x0000 && addr <= 0x1FFF)
 	{
+		// System RAM Address Range, mirrored every 2048
 		data = cpuRam[addr & 0x07FF];
 	}
 	else if (addr >= 0x2000 && addr <= 0x3FFF)
 	{
+		// PPU Address range, mirrored every 8
 		data = ppu.cpuRead(addr & 0x0007, bReadOnly);
+	}
+	else if (addr == 0x4015)
+	{
+		data = apu.cpuRead(addr);
 	}
 	else if (addr >= 0x4016 && addr <= 0x4017)
 	{
@@ -78,12 +92,12 @@ void Bus::reset()
 	dma_transfer = false;
 }
 
-void Bus::clock()
+bool Bus::clock()
 {
 	ppu.clock();
+	apu.clock();
 	if (nSystemClockCounter % 3 == 0)
-{
-		// Check for Direct Memory Access
+	{
 		if (dma_transfer)
 		{
 			if (dma_dummy)
@@ -122,11 +136,30 @@ void Bus::clock()
 		}		
 	}
 
+	// Audio sync
+	bool bAudioSampleReady = false;
+	dAudioTime += dAudioTimePerNESClock;
+	if (dAudioTime >= dAudioTimePerSystemSample)
+	{
+		dAudioTime -= dAudioTimePerSystemSample;
+		dAudioSample = apu.GetOutputSample();
+		bAudioSampleReady = true;
+	}
+
+	// If PPU emits interrupt, send IRQ to CPU
 	if (ppu.nmi)
 	{
 		ppu.nmi = false;
 		cpu.nmi();
 	}
 
+
+	// Check IRQ request
+	if (cart->GetMapper()->irqState())
+	{
+		cart->GetMapper()->irqClear();
+		cpu.irq();		
+	}
 	nSystemClockCounter++;
+	return bAudioSampleReady;
 }

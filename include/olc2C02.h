@@ -9,10 +9,10 @@
 class olc2C02
 {
 public:
-    olc2C02();
-    ~olc2C02();
+	olc2C02();
+	~olc2C02();
 
-private:
+private:		
     // GamePak Cartridge
     std::shared_ptr<Cartridge> cart;
 
@@ -24,12 +24,14 @@ private:
 	int16_t scanline = 0;
 	int16_t cycle = 0;
 
- private:
+private:
 	olc::Pixel  palScreen[0x40];
 
 	olc::Sprite* sprScreen;
 	olc::Sprite* sprNameTable[2];
-	olc::Sprite* sprPatternTable[2];   
+	olc::Sprite* sprPatternTable[2];
+	bool odd_frame = false;
+	uint8_t oam_addr = 0x00;
 
 public:
 	olc::Sprite& GetScreen();
@@ -37,13 +39,12 @@ public:
 	olc::Sprite& GetPatternTable(uint8_t i, uint8_t palette);
 
 	olc::Pixel& GetColourFromPaletteRam(uint8_t palette, uint8_t pixel);
-
+	
 	bool frame_complete = false;
 
 private:
 
-    // Status register
-	union
+	union PPUSTATUS
 	{
 		struct
 		{
@@ -56,8 +57,8 @@ private:
 		uint8_t reg;
 	} status;
 
-    // Mask register
-    union
+
+	union PPUMASK
 	{
 		struct
 		{
@@ -142,27 +143,24 @@ private:
 	uint8_t sprite_shifter_pattern_lo[8];
 	uint8_t sprite_shifter_pattern_hi[8];
 
-	// Address for when CPU inits OAM
-	uint8_t oam_addr = 0x00;
-
-	// Zero collision flags
 	bool bSpriteZeroHitPossible = false;
 	bool bSpriteZeroBeingRendered = false;
 
 public:
-    // Main bus comms
-    uint8_t cpuRead(uint16_t addr, bool rdonly = false);
-    void cpuWrite(uint16_t addr, uint8_t data);
+	// Main bus comms
+	uint8_t cpuRead(uint16_t addr, bool rdonly = false);
+	void cpuWrite(uint16_t addr, uint8_t data);
 
-    // PPU bus comms
-    uint8_t ppuRead(uint16_t addr, bool rdonly = false);
-    void ppuWrite(uint16_t addr, uint8_t data);
+	// PPU bus comms
+	uint8_t ppuRead(uint16_t addr, bool rdonly = false);
+	void ppuWrite(uint16_t addr, uint8_t data);
 
-    void ConnectCartridge(const std::shared_ptr<Cartridge>& cartridge);
-    void clock();
+	void ConnectCartridge(const std::shared_ptr<Cartridge>& cartridge);
+	void clock();
 	void reset();
 	bool nmi = false;
 
 	// Need write access for OAM
 	uint8_t* pOAM = (uint8_t*)OAM;
+	bool scanline_trigger = false;
 };

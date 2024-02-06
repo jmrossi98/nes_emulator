@@ -16,9 +16,15 @@ Games that have been tested to run:
 * Mario Bros
 * Super Mario Bros
 * Donkey Kong
+* Legend of Zelda
+* Kirby's Adventure
+* Metroid
+* Kid Icarus
 * Excitebike
 * Ice Climbers
-* Bomberman
+* Castlevania
+* Mega Man
+* Ninja Gaiden
 
 ## Installation
 
@@ -75,6 +81,12 @@ To end emulation, press ESC.
 ![Screenshot 1](images/mb.png)
 ![Screenshot 2](images/smb.png)
 ![Screenshot 3](images/dk.png)
-![Screenshot 4](images/excitebike.png)
-![Screenshot 5](images/iceclimbers.png)
-![Screenshot 6](images/bomberman.png)
+![Screenshot 4](images/loz.png)
+![Screenshot 5](images/kirby.png)
+![Screenshot 6](images/metroid.png)
+![Screenshot 7](images/icarus.png)
+![Screenshot 8](images/excitebike.png)
+![Screenshot 9](images/iceclimbers.png)
+![Screenshot 10](images/castlevania.png)
+![Screenshot 11](images/megaman.png)
+![Screenshot 11](images/ninja.png)

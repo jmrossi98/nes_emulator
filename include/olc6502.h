@@ -4,15 +4,15 @@
 #include <string>
 #include <map>
 #include <stdio.h>
-#include <stdint.h>
 
+#include <cstdint>
 class Bus;
 
 class olc6502
 {
 public:
-    olc6502();
-    ~olc6502();
+	olc6502();
+	~olc6502();
 
 public:
     enum FLAGS6502
@@ -27,7 +27,7 @@ public:
         N = (1 << 7), // Negative
     };
 
-    uint8_t a = 0x00; // Accumulator register
+	uint8_t a = 0x00; // Accumulator register
     uint8_t x = 0x00; // X Register
     uint8_t y = 0x00; // Y Register
     uint8_t stkp = 0x00; // Stack Pointer (points location on bus)
@@ -44,10 +44,10 @@ public:
     void nmi();
 
 private:
-    Bus *bus = nullptr;
-    uint8_t read(uint16_t a);
-    void write(uint16_t a, uint8_t d);
-    uint8_t fetch();
+	Bus *bus = nullptr;
+	uint8_t read(uint16_t a);
+	void write(uint16_t a, uint8_t d);
+	uint8_t fetch();
 
     // Functions to access status register
     uint8_t GetFlag(FLAGS6502 f);
@@ -62,17 +62,17 @@ private:
     uint8_t cycles = 0;
     uint32_t clock_count = 0;
 
-    struct INSTRUCTION 
-    {
-        std::string name;
-        uint8_t(olc6502::*operate)(void) = nullptr;
-        uint8_t(olc6502::*addrmode)(void) = nullptr;
-        uint8_t cycles = 0;
-    };
+	struct INSTRUCTION
+	{
+		std::string name;		
+		uint8_t(olc6502::*operate)(void) = nullptr;
+		uint8_t(olc6502::*addrmode)(void) = nullptr;
+		uint8_t cycles = 0;
+	};
 
-    std::vector<INSTRUCTION> lookup;
-
-private:
+	std::vector<INSTRUCTION> lookup;
+	
+private: 
     // Addressing Modes
     uint8_t IMP(); uint8_t IMM();
     uint8_t ZP0(); uint8_t ZPX();
@@ -81,9 +81,9 @@ private:
     uint8_t ABY(); uint8_t IND();
     uint8_t IZX(); uint8_t IZY();
 
-private:
+private: 
 
-    // Opcodes
+	// Opcodes
 	uint8_t ADC();	uint8_t AND();	uint8_t ASL();	uint8_t BCC();
 	uint8_t BCS();	uint8_t BEQ();	uint8_t BIT();	uint8_t BMI();
 	uint8_t BNE();	uint8_t BPL();	uint8_t BRK();	uint8_t BVC();
@@ -99,6 +99,6 @@ private:
 	uint8_t STX();	uint8_t STY();	uint8_t TAX();	uint8_t TAY();
 	uint8_t TSX();	uint8_t TXA();	uint8_t TXS();	uint8_t TYA();
 
-    uint8_t XXX();
+	uint8_t XXX();
 
 };
