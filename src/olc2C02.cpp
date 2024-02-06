@@ -1,4 +1,3 @@
-#pragma once
 
 #include "olc2C02.h"
 
@@ -106,7 +105,7 @@ olc::Sprite& olc2C02::GetPatternTable(uint8_t i, uint8_t palette)
 			// Now loop through 8 rows of 8 pixels
 			for (uint16_t row = 0; row < 8; row++)
 			{
-
+				
 				// Read from pattern tables
 				uint8_t tile_lsb = ppuRead(i * 0x1000 + nOffset + row + 0x0000);
 				uint8_t tile_msb = ppuRead(i * 0x1000 + nOffset + row + 0x0008);
@@ -114,7 +113,7 @@ olc::Sprite& olc2C02::GetPatternTable(uint8_t i, uint8_t palette)
 				// Iterate through the 8-bit words, combining them to give us the final pixel index
 				for (uint16_t col = 0; col < 8; col++)
 				{
-					uint8_t pixel = (tile_lsb & 0x01) << 1 | (tile_msb & 0x01);
+					uint8_t pixel = (tile_msb & 0x01) << 1 | (tile_lsb & 0x01);
 
 					// Shift the row words 1 bit right for each column of the character.
 					tile_lsb >>= 1; tile_msb >>= 1;
@@ -159,35 +158,35 @@ uint8_t olc2C02::cpuRead(uint16_t addr, bool rdonly)
 	// Read only makes it so PPU state can be checked without fear of changing anything
 	if (rdonly)
 	{
-	switch (addr)
-	{
-	case 0x0000: // Control
+		switch (addr)
+		{
+		case 0x0000: // Control
 			data = control.reg;
-		break;
-	case 0x0001: // Mask
+			break;
+		case 0x0001: // Mask
 			data = mask.reg;
-		break;
-	case 0x0002: // Status
+			break;
+		case 0x0002: // Status
 			data = status.reg;
-		break;
-	case 0x0003: // OAM Address
-		break;
-	case 0x0004: // OAM Data
-		break;
-	case 0x0005: // Scroll
-		break;
-	case 0x0006: // PPU Address
-		break;
-	case 0x0007: // PPU Data
-		break;
-	}
+			break;
+		case 0x0003: // OAM Address
+			break;
+		case 0x0004: // OAM Data
+			break;
+		case 0x0005: // Scroll
+			break;
+		case 0x0006: // PPU Address
+			break;
+		case 0x0007: // PPU Data
+			break;
+		}
 	}
 
 	// In this case registers can change state when being read from
 	else
 	{
 		switch (addr)
-		{
+				{
 		case 0x0000: // Control
 			break;
 		case 0x0001: // Mask
@@ -287,7 +286,7 @@ void olc2C02::cpuWrite(uint16_t addr, uint8_t data)
 	case 0x0007: // PPU Data
 		ppuWrite(vram_addr.reg, data);
 
-		// In vertical mode, skip one nametable row, in horizontal mode move to next column
+// In vertical mode, skip one nametable row, in horizontal mode move to next column
 		vram_addr.reg += (control.increment_mode ? 32 : 1);
 		break;
 	}
@@ -311,7 +310,7 @@ uint8_t olc2C02::ppuRead(uint16_t addr, bool rdonly)
 		addr &= 0x0FFF;
 
 		// Vertical
-		if (cart->mirror == Cartridge::MIRROR::VERTICAL)
+		if (cart->Mirror() == MIRROR::VERTICAL)
 		{
 			if (addr >= 0x0000 && addr <= 0x03FF)
 				data = tblName[0][addr & 0x03FF];
@@ -324,7 +323,7 @@ uint8_t olc2C02::ppuRead(uint16_t addr, bool rdonly)
 		}
 
 		// Horizontal
-		else if (cart->mirror == Cartridge::MIRROR::HORIZONTAL)
+		else if (cart->Mirror() == MIRROR::HORIZONTAL)
 		{
 			if (addr >= 0x0000 && addr <= 0x03FF)
 				data = tblName[0][addr & 0x03FF];
@@ -364,7 +363,7 @@ void olc2C02::ppuWrite(uint16_t addr, uint8_t data)
 	else if (addr >= 0x2000 && addr <= 0x3EFF)
 	{
 		addr &= 0x0FFF;
-		if (cart->mirror == Cartridge::MIRROR::VERTICAL)
+		if (cart->Mirror() == MIRROR::VERTICAL)
 		{
 			// Vertical
 			if (addr >= 0x0000 && addr <= 0x03FF)
@@ -376,7 +375,7 @@ void olc2C02::ppuWrite(uint16_t addr, uint8_t data)
 			if (addr >= 0x0C00 && addr <= 0x0FFF)
 				tblName[1][addr & 0x03FF] = data;
 		}
-		else if (cart->mirror == Cartridge::MIRROR::HORIZONTAL)
+		else if (cart->Mirror() == MIRROR::HORIZONTAL)
 		{
 			// Horizontal
 			if (addr >= 0x0000 && addr <= 0x03FF)
@@ -420,6 +419,8 @@ void olc2C02::reset()
 	control.reg = 0x00;
 	vram_addr.reg = 0x0000;
 	tram_addr.reg = 0x0000;
+	scanline_trigger = false;
+	odd_frame = false;
 }
 
 void olc2C02::clock()
@@ -558,7 +559,7 @@ void olc2C02::clock()
 	// Background
 	//////////////////////////////////////////////////////////////////////////////////
 
-		if (scanline == 0 && cycle == 0)
+		if (scanline == 0 && cycle == 0 && odd_frame && (mask.render_background || mask.render_sprites))
 		{
 			// Skip cycle
 			cycle = 1;
@@ -685,7 +686,7 @@ void olc2C02::clock()
 				int16_t diff = ((int16_t)scanline - (int16_t)OAM[nOAMEntry].y);
 
 				// Check sprite height mode
-				if (diff >= 0 && diff < (control.sprite_size ? 16 : 8))
+				if (diff >= 0 && diff < (control.sprite_size ? 16 : 8) && sprite_count < 8)
 				{
 					// Copy entry over to scanline sprite cache
 					if (sprite_count < 8)
@@ -696,14 +697,14 @@ void olc2C02::clock()
 							bSpriteZeroHitPossible = true;
 						}
 						memcpy(&spriteScanline[sprite_count], &OAM[nOAMEntry], sizeof(sObjectAttributeEntry));
-						sprite_count++;
-					}				
+					}
+					sprite_count++;
 				}
 				nOAMEntry++;
 			}
 
 			// Set sprite overflow flag
-			status.sprite_overflow = (sprite_count > 8);
+			status.sprite_overflow = (sprite_count >= 8);
 		}
 
 		if (cycle == 340)
@@ -841,20 +842,23 @@ void olc2C02::clock()
 	// Only render BG if enabled
 	if (mask.render_background)
 	{
-		// Get relevant bit
-		uint16_t bit_mux = 0x8000 >> fine_x;
+		if (mask.render_background_left || (cycle >= 9))
+		{
+			// Get relevant bit
+			uint16_t bit_mux = 0x8000 >> fine_x;
 
-		// Select plane pixels
-		uint8_t p0_pixel = (bg_shifter_pattern_lo & bit_mux) > 0;
-		uint8_t p1_pixel = (bg_shifter_pattern_hi & bit_mux) > 0;
+			// Select plane pixels
+			uint8_t p0_pixel = (bg_shifter_pattern_lo & bit_mux) > 0;
+			uint8_t p1_pixel = (bg_shifter_pattern_hi & bit_mux) > 0;
 
-		// Find pixel index
-		bg_pixel = (p1_pixel << 1) | p0_pixel;
+			// Find pixel index
+			bg_pixel = (p1_pixel << 1) | p0_pixel;
 
-		// Get palette
-		uint8_t bg_pal0 = (bg_shifter_attrib_lo & bit_mux) > 0;
-		uint8_t bg_pal1 = (bg_shifter_attrib_hi & bit_mux) > 0;
-		bg_palette = (bg_pal1 << 1) | bg_pal0;
+			// Get palette
+			uint8_t bg_pal0 = (bg_shifter_attrib_lo & bit_mux) > 0;
+			uint8_t bg_pal1 = (bg_shifter_attrib_hi & bit_mux) > 0;
+			bg_palette = (bg_pal1 << 1) | bg_pal0;
+		}
 	}
 
 	//////////////////////////////////////////////////////////////////////////////////
@@ -865,33 +869,36 @@ void olc2C02::clock()
 	uint8_t fg_priority = 0x00;
 	if (mask.render_sprites)
 	{
-		// Iterate through all sprites
-		bSpriteZeroBeingRendered = false;
-		for (uint8_t i = 0; i < sprite_count; i++)
+		if (mask.render_sprites_left || (cycle >= 9))
 		{
-			// Check for collision
-			if (spriteScanline[i].x == 0) 
+			// Iterate through all sprites
+			bSpriteZeroBeingRendered = false;
+			for (uint8_t i = 0; i < sprite_count; i++)
 			{
-				// Use the MSB of the shifter
-				uint8_t fg_pixel_lo = (sprite_shifter_pattern_lo[i] & 0x80) > 0;
-				uint8_t fg_pixel_hi = (sprite_shifter_pattern_hi[i] & 0x80) > 0;
-				fg_pixel = (fg_pixel_hi << 1) | fg_pixel_lo;
-
-				// Get palette from the bottom two bits
-				fg_palette = (spriteScanline[i].attribute & 0x03) + 0x04;
-				fg_priority = (spriteScanline[i].attribute & 0x20) == 0;
-
-				// Render pixel if visible
-				if (fg_pixel != 0)
+				// Check for collision
+				if (spriteScanline[i].x == 0) 
 				{
-					if (i == 0)
+					// Use the MSB of the shifter
+					uint8_t fg_pixel_lo = (sprite_shifter_pattern_lo[i] & 0x80) > 0;
+					uint8_t fg_pixel_hi = (sprite_shifter_pattern_hi[i] & 0x80) > 0;
+					fg_pixel = (fg_pixel_hi << 1) | fg_pixel_lo;
+
+					// Get palette from the bottom two bits
+					fg_palette = (spriteScanline[i].attribute & 0x03) + 0x04;
+					fg_priority = (spriteScanline[i].attribute & 0x20) == 0;
+
+					// Render pixel if visible
+					if (fg_pixel != 0)
 					{
-						bSpriteZeroBeingRendered = true;
+						if (i == 0)
+						{
+							bSpriteZeroBeingRendered = true;
+						}
+						break;
 					}
-					break;
-				}				
+				}
 			}
-		}		
+		}
 	}
 
 	// Final pixel/palette
@@ -939,7 +946,7 @@ void olc2C02::clock()
 			// Collision found
 			if (mask.render_background & mask.render_sprites)
 			{
-				if (~(mask.render_background_left | mask.render_sprites_left))
+				if (!(mask.render_background_left | mask.render_sprites_left))
 				{
 					if (cycle >= 9 && cycle < 258)
 					{
@@ -962,6 +969,11 @@ void olc2C02::clock()
 
 	// Frame completed
 	cycle++;
+	if(mask.render_background || mask.render_sprites)
+		if (cycle == 260 && scanline < 240)
+		{
+			cart->GetMapper()->scanline();
+		}
 	if (cycle >= 341)
 	{
 		cycle = 0;
@@ -970,6 +982,7 @@ void olc2C02::clock()
 		{
 			scanline = -1;
 			frame_complete = true;
+			odd_frame = !odd_frame;
 		}
 	}
 }
