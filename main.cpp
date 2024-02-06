@@ -6,6 +6,7 @@
 
 #define OLC_PGE_APPLICATION
 #define OLC_PGEX_SOUND
+
 #include "olcPixelGameEngine.h"
 #include "olcPGEX_Sound.h"
 
@@ -114,7 +115,7 @@ int main(int argc, char* argv[])
 {
 	Emulator emulator;
 	emulator.rom_url = argv[1];
-	emulator.Construct(780, 480, 2, 2);
+	emulator.Construct(780, 480, 2, 2, true);
 	emulator.Start();
 	return 0;
 }

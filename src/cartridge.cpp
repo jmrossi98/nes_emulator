@@ -122,6 +122,7 @@ bool Cartridge::cpuWrite(uint16_t addr, uint8_t data)
 	{
 		if (mapped_addr == 0xFFFFFFFF)
 		{
+			
 			// Mapper has actually set the data value, for example cartridge based RAM
 			return true;
 		}
